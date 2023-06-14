@@ -1,0 +1,413 @@
+<html>
+    <head>
+        <link href="Decoder.css" rel="Stylesheet" type="text/css"></link>
+        <meta charset="UTF-8">
+        <title>Trinary Decoder</title>
+        <style>
+            .area {
+                cursor:pointer;
+            }
+            .area.deselected {
+                fill: transparent;
+            }
+            .area.deselected.nines:hover .square {
+                fill: #ff000011;
+            }
+            .area.deselected.threes:hover .square {
+                fill: #00ff0011;
+            }
+            .area.deselected.ones:hover .square {
+                fill: #0000ff11;
+            }
+            .square {
+                stroke: black;
+                stroke-width: 4px;
+            }
+            .deselected .square {
+                fill: white;
+            }
+            #tbit-1-2.selected .square {
+                fill: #5555ff;
+            }
+            #tbit-1-1.selected .square {
+                fill: #8888ff;
+            }
+            #tbit-1-0.selected .square {
+                fill: #ccccff;
+            }
+            #tbit-3-2.selected .square {
+                fill: #55ff55;
+            }
+            #tbit-3-1.selected .square {
+                fill: #88ff88;
+            }
+            #tbit-3-0.selected .square {
+                fill: #ccffcc;
+            }
+            #tbit-9-2.selected .square {
+                fill: #ff5555;
+            }
+            #tbit-9-1.selected .square {
+                fill: #ff8888;
+            }
+            #tbit-9-0.selected .square {
+                fill: #ffcccc;
+            }
+            .bitText {
+                fill: #eeeeee;
+                stroke: black;
+                stroke-width: 1px;
+                font-size: 54px;
+                text-anchor: middle;
+            }
+            .area:hover .bitText {
+                fill: #c300ff88;
+            }
+            .intText {
+                fill: #666666;
+                font-size: 20px;
+                text-anchor: middle;
+            }
+            .selected .intText {
+                fill: white;
+            }
+            .area:hover .intText {
+                fill: #c300ff88;
+            }
+            #bitMath {
+                text-align: center;
+                font-size: 20pt;
+                height: 40px;
+            }
+            .decimal {
+                font-size: 24pt;
+                vertical-align: -3pt;
+            }
+            #fromAlpha {
+                height: 320px;
+            }
+            #AlphaToCode {
+                height: 320px;
+            }
+            #CodeToAlpha {
+                height: 320px;
+            }
+            .tribits {
+                vertical-align: -1pt;
+            }
+        </style>
+        <script src="DecoderUtils.js"></script>
+        <script>
+            var codeFormat = 'trinary';
+
+            function clearPartial() {
+                updateBits(0);
+                clearMath();
+                setAlpha();
+            }
+
+            function lookupAlpha(code) {
+                if (code == 0)
+                    return ' ';
+                return String.fromCharCode(64 + code);
+            }
+
+            function lookupCode(alpha) {
+                var index = alpha.charCodeAt(0) - 64;
+                if (index < 1 || index > 26) {
+                    return 0;
+                }
+                return index;
+            }
+
+            const xmlns = "http://www.w3.org/2000/svg";
+            var glyphHeight = 24;
+            var boxWidth = 8;
+
+            function renderCode(code) {
+                return ['trinary', makeTrinarySvg(code), makeTrinaryUnicode(code, '2', '1', '0')];
+            }
+
+            function makeTrinaryUnicode(code, two, one, zero) {
+                var str = '';
+                for (var three = 9; three >= 1; three /= 3) {
+                    for (var i = 2; i >= 0; i--) {
+                        if (getTrit(code, three) == i) {
+                            str += i == 2 ? two : i == 1 ? one : zero;
+                            break;
+                        }
+                    }
+                    code = code % three;
+                }
+                return str;
+            }
+
+            function makeTrinarySvg(code) {
+                if (code == null) {
+                    return ' ';
+                }
+
+                var svg = document.createElementNS(xmlns, 'svg');
+                svg.classList.add('tribits');
+                svg.setAttributeNS(null, 'width', glyphHeight);
+                svg.setAttributeNS(null, 'height', glyphHeight);
+
+                var three = 9;
+                for (var x = 0; x < 3; x++) {
+                    var times = 2;
+                    for (var y = 0; y < 3; y++) {
+                        var box = document.createElementNS(xmlns, 'rect');
+                        box.setAttributeNS(null, 'x', x * boxWidth + 1);
+                        box.setAttributeNS(null, 'width', boxWidth - 2);
+                        box.setAttributeNS(null, 'y', y * boxWidth + 1);
+                        box.setAttributeNS(null, 'height', boxWidth - 2);
+                        box.setAttributeNS(null, 'stroke', 'black');
+                        box.setAttributeNS(null, 'stroke-width', '.5px');
+                        var on = getTrit(code, three) == times;
+                        box.setAttributeNS(null, 'fill', on ? 'black' : 'white');
+                        box.setAttributeNS(null, 'rx', on ? '1' : '2');
+                        box.setAttributeNS(null, 'ry', on ? '1' : '2');
+                        svg.appendChild(box);
+                        times--;
+                    }
+                    three /= 3;
+                }
+                return svg.outerHTML;
+            }
+
+            function createCode(alpha) {
+                var code = lookupCode(alpha);
+                updateBits(code);
+                updateMath(code);
+                setAlpha(code == 0 ? ' ' : alpha);
+            }
+
+            var mnemonics = 'cdexswzaq';
+
+            function codeFromKey(key) {
+                key = event.key.toLowerCase();
+                if (mnemonics.indexOf(key) < 0) {
+                    return null;
+                }
+                var three = Math.pow(3, Math.trunc(mnemonics.indexOf(key) / 3));
+                var index = Math.trunc(mnemonics.indexOf(key) % 3);
+                return [three, index];
+            }
+
+            function codeKeyDown(evt) {
+                if (event.key.length == 1) {
+                    var grid = codeFromKey(event.key);
+                    if (grid != null) {
+                        setTrit(grid[0], grid[1]);
+                    }
+                }
+            }
+
+            function getCurrentCode() {
+                var code = 0;
+                for (var t = 1; t <= 9; t *= 3) {
+                    for (var i = 0; i < 3; i++) {
+                        var area = document.getElementById('tbit-' + t + '-' + i);
+                        if (area.classList.contains('selected')) {
+                            code += t * i;
+                        }
+                    }
+                }
+                return code;
+            }
+
+            function clearMath() {
+                var div = document.getElementById('bitMath');
+                div.innerHTML = "&nbsp;";
+            }
+
+            function getTrit(code, three) {
+                return Math.trunc((code % (three * 3)) / three);
+            }
+            function updateMath(code) {
+                clearMath();
+                var str = '';
+                for (var t = 9; t >= 1; t /= 3) {
+                    for (var i = 2; i > 0; i--) {
+                        if (getTrit(code, t) == i) {
+                            if (str.length > 0) {
+                                str += ' &plus; ';
+                            }
+                            str += '<span class="decimal">' + i + '\u22C5' + t + '</span>';  // \u22c5 is the multiplication dot. Other options include &bull; or &times; but not &middot;
+                        }
+                    }
+                }
+                if (str.length == 0) {
+                    str = '<span class="decimal">' + 0 + '</span>';
+                }
+                else {
+                    str += ' &equals; <span class="decimal">' + code + '</span>';
+                }
+
+                var div = document.getElementById('bitMath');
+                div.innerHTML = str;
+            }
+
+            function setTrit(three, times) {
+                for (var i = 0; i < 3; i++) {
+                    var area = document.getElementById('tbit-' + three + '-' + i);
+                    if (i == times) {
+                        area.classList.remove('deselected');
+                        area.classList.add('selected');
+                    }
+                    else {
+                        area.classList.add('deselected');
+                        area.classList.remove('selected');
+                    }
+                }
+                var code = getCurrentCode();
+                updateMath(code);
+                setAlpha(lookupAlpha(code));
+            }
+            
+            function updateBits(code) {
+                for (var t = 9; t >= 1; t /= 3) {
+                    for (var i = 2; i >= 0; i--) {
+                        var area = document.getElementById('tbit-' + t + '-' + i);
+                        if (getTrit(code, t) == i) {
+                            area.classList.remove('deselected');
+                            area.classList.add('selected');
+                        }
+                        else {
+                            area.classList.add('deselected');
+                            area.classList.remove('selected');
+                        }
+                    }
+                }
+            }
+        </script>
+    </head>
+    <body onkeydown="keyDown()" onload="readUrl()">
+        <table id="decoder-menu">
+            <tr>
+                <td title="Decoder Home"><a href="javascript:goto('index')">🏠</a></td>
+                <td><a href="javascript:goto('Braille')">Braille</a></td>
+                <td><a href="javascript:goto('Morse')">Morse</a></td>
+                <td><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+                <td><a href="javascript:goto('PigPen')">Pig Pen</a></td>
+                <td><a href="javascript:goto('FiveBit')">Five Bit</a></td>
+                <td class="current">Trinary</td>
+                <td><a href="javascript:goto('Nautical')">Nautical</a></td>
+                <td><a href="javascript:goto('RotCipher')">Rot</a></td>
+                <td><a href="javascript:goto('Ascii')">Ascii</a></td>
+                <td class="instruction-link" title="Instructions"><a href="javascript:toggleInstructions()">&#x2753;</a></td>
+            </tr>
+        </table>
+        <table id="InputTable">
+            <tr>
+                <td id="AlphaToCode" rowspan="2">
+                    <input type='text' id="fromAlpha" maxlength="1">
+                    <button id="fastButton" title="<Ctrl+Space>" onclick="toggleFast()">Auto</button>
+                </td>
+                <td id="BitField" style="width:300px; height:300px; position: relative;">
+                    <svg width="300" height="300">
+                        <g id="tbit-9-2" onmousedown="setTrit(9,2)" class="area nines deselected">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>Q</title></rect>
+                            <text class="bitText" x="40" y="65">2</text>
+                            <text class="intText" x="70" y="80">(18)</text>
+                        </g>
+                        <g id="tbit-9-1" onmousedown="setTrit(9,1)" class="area nines deselected" transform="translate(0,100)">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>A</title></rect>
+                            <text class="bitText" x="40" y="65">1</text>
+                            <text class="intText" x="70" y="80">(9)</text>
+                        </g>
+                        <g id="tbit-9-0" onmousedown="setTrit(9,0)" class="area nines selected" transform="translate(0,200)">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>Z</title></rect>
+                            <text class="bitText" x="40" y="65">0</text>
+                        </g>
+
+                        <g id="tbit-3-2" onmousedown="setTrit(3,2)" class="area threes deselected" transform="translate(100,0)">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>W</title></rect>
+                            <text class="bitText" x="40" y="65">2</text>
+                            <text class="intText" x="70" y="80">(6)</text>
+                        </g>
+                        <g id="tbit-3-1" onmousedown="setTrit(3,1)" class="area threes deselected" transform="translate(100,100)">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>S</title></rect>
+                            <text class="bitText" x="40" y="65">1</text>
+                            <text class="intText" x="70" y="80">(3)</text>
+                        </g>
+                        <g id="tbit-3-0" onmousedown="setTrit(3,0)" class="area threes selected" transform="translate(100,200)">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>X</title></rect>
+                            <text class="bitText" x="40" y="65">0</text>
+                        </g>
+
+                        <g id="tbit-1-2" onmousedown="setTrit(1,2)" class="area ones deselected" transform="translate(200,0)">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>E</title></rect>
+                            <text class="bitText" x="40" y="65">2</text>
+                            <text class="intText" x="70" y="80">(2)</text>
+                        </g>
+                        <g id="tbit-1-1" onmousedown="setTrit(1,1)" class="area ones deselected" transform="translate(200,100)">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>D</title></rect>
+                            <text class="bitText" x="40" y="65">1</text>
+                            <text class="intText" x="70" y="80">(1)</text>
+                        </g>
+                        <g id="tbit-1-0" onmousedown="setTrit(1,0)" class="area ones selected" transform="translate(200,200)">
+                            <rect x="5" y="5" width="90" height="90" rx="5" ry="5" class="square" ><title>C</title></rect>
+                            <text class="bitText" x="40" y="65">0</text>
+                        </g>
+                    </svg>
+                </td>
+                <td id="CodeToAlpha" style="width: 1em; border: dotted 1px lightgray;" rowspan="2">
+                    <span id="fromCode">&nbsp;</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="position: relative; vertical-align: top; height: 75px;">
+                    <div id="bitMath">
+                        &nbsp;
+                    </div>
+                    <div id="directionIndicator" style="top:50px;">
+                        <button id="leftDir" title="<Caps>" class="dirButton" onclick="reverseDecoder(false)">Text to Trinary</button>
+                        <button id="rightDir" title="<Caps>" class="dirButton active" onclick="reverseDecoder(true)">Trinary to Text</button>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table style="width:95%">
+            <tr>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="saveButton" title="<Space>" onclick="saveStack(false)">Save</button>
+                    <br>
+                    <button id="clearStack" title="<Ctrl+Backspace>" onclick="clearStack()">Clear</button>
+                </td>
+                <td id="saveCode">
+                </td>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="clipCode" class="clipButton" onclick="clip('trinary')">Copy Trinary</button>
+                    <br>
+                    <button id="clipCode2" class="clipButton" onclick="clip('trinary', 'data-text')">Copy 210</button>
+                    <br>
+                    <button id="clipAlpha" class="clipButton" onclick="clip('alpha')">Copy Text</button>
+                    <br>
+                    <button id="pasteAlpha" class="clipButton" onclick="paste('alpha')">Paste Text</button>
+                </td>
+            </tr>
+        </table>
+        <div id="instructions" style="display: none;" onclick="toggleInstructions()">
+            <p>This decoder has two modes: converting from and to Trinary.
+                <br>Use CAPS LOCK to toggle between these modes.
+            </p>
+            <p>When converting <i>from</i> Trinary, the trinary digit grid is on the left.
+                <br>You can click on a value in each column to select it, or use the hot keys:
+                <span style="font-family: monospace; font-size: 16pt;">
+                <br>&nbsp;&nbsp;Q&nbsp;&nbsp;W&nbsp;&nbsp;E
+                <br>&nbsp;&nbsp;A&nbsp;&nbsp;S&nbsp;&nbsp;D
+                <br>&nbsp;&nbsp;Z&nbsp;&nbsp;X&nbsp;&nbsp;C
+            </p>
+            <p>When converting <i>to</i> Trinary, the trinary digit grid is on the right.
+                <br>Type any letter to see its Trinary equivalent.
+                <br>Numbers and punctuation are not converted.
+            </p>
+            <p>In either mode, type SPACE to save the current letter and start a new one.
+                <br>Typing BACKSPACE will erase saved letters.
+                <br>Typing ESCAPE will simple clear the selection.
+                <br><i>AUTO</i> (ctrl+SPACE) mode means all typing converts immediately.
+            </p>
+        </div>
+</body>
+</html>

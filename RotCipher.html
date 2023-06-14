@@ -1,0 +1,255 @@
+<html>
+    <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Cousine&display=swap" rel="stylesheet">
+        <link href="Decoder.css" rel="Stylesheet" type="text/css"></link>
+        <meta charset="UTF-8">
+        <title>Rotation Decoder</title>
+        <style>
+            #fromAlpha {
+                height: 320px;
+            }
+            #AlphaToCode {
+                height: 320px;
+            }
+            #CodeToAlpha {
+                height: 320px;
+            }
+            #directionIndicator {
+                bottom: .5in;
+            }
+            .rot {
+                color: red;
+                font-weight: bold;
+            }
+            textarea {
+                width: 100%;
+                height: 1.25in;
+                font-family: Cousine;
+                font-size: 16pt;
+                text-transform: uppercase;
+            }
+            #SourceString {
+                color: purple;
+            }
+            #DestString {
+                color: green;
+            }
+            #AllRotations {
+                border-collapse: collapse;
+            }
+            #AllRotations tr:nth-child(odd) {
+                background-color: #b0ebff;
+            }
+            #AllRotations tr:nth-child(even) {
+                background-color: #caf1ff;
+            }
+            #AllRotations th {
+                text-align: right;
+                font-family: serif;
+                width: 0.3in;
+                padding-right: 0.1in;
+            }
+            #AllRotations td {
+                text-align: left;
+                font-family: Cousine;
+                font-size: 14pt;
+                text-transform: uppercase;
+            }
+        </style>
+        <script>
+            var codeFormat = 'rotcipher';
+            function goto(page) {
+                var url = page + '.html';
+                if (window.location.search.length > 0) {
+                    url += '?' + window.location.search;
+                }
+                window.location.href = url;
+            }
+            function rotateText(text, rot) {
+                var dest = '';
+                for (var i = 0; i < text.length; i++) {
+                    var ch = text[i];
+                    if (ch >= 'A' && ch <= 'Z') {
+                        var code = ch.charCodeAt(0) - 65;
+                        code = (code + rot) % 26;
+                        dest += String.fromCharCode(65 + code);
+                    }
+                    else if (ch >= 'a' && ch <= 'z') {
+                        var code = ch.charCodeAt(0) - 97;
+                        code = (code + rot) % 26;
+                        dest += String.fromCharCode(97 + code);
+                    }
+                    else {
+                        dest += ch;
+                    }
+                }
+                return dest;
+            }
+            function onSourceChange() {
+                var rot = document.getElementById('RotSelector').value;
+                if (rot == 'All') {
+                    rotateAll();
+                    return;
+                }
+                var rot = parseInt(rot);
+                var src = document.getElementById('SourceString').value;
+                var dest = rotateText(src, rot);
+                document.getElementById('DestString').value = dest;
+            }
+            function onDestChange() {
+                var rot = parseInt(document.getElementById('RotSelector').value);
+                var src = document.getElementById('DestString').value;
+                var dest = rotateText(src, 26 - rot);
+                document.getElementById('SourceString').value = dest;
+            }
+            function onRotChange() {
+                var rot = document.getElementById('RotSelector').value;
+                if (rot == 'All') {
+                    document.getElementById('AllOnly').style.display = 'table-row';
+                    document.getElementById('AllHide').style.display = 'none';
+                    rotateAll();
+                }
+                else {
+                    document.getElementById('AllOnly').style.display = 'none';
+                    document.getElementById('AllHide').style.display = 'table-row';
+                    onSourceChange();
+                }
+            }
+            function rotateAll() {
+                var src = document.getElementById('SourceString').value;
+                for (var rot = 1; rot <= 25; rot++) {
+                    var dest = rotateText(src, rot);
+                    document.getElementById('rot' + rot).innerText = dest;
+                }
+            }
+            function clearStack() {
+                document.getElementById('SourceString').value = '';
+                onRotChange();
+            }
+            function toggleInstructions(show) {
+                var instr = document.getElementById('instructions');
+                if (show == undefined) {
+                    show = instr.style.display == 'none';
+                }
+                if (show) {
+                    instr.style.display = '';
+                    instr.scrollIntoView();
+                }
+                else {
+                    instr.style.display = 'none';
+                }
+            }
+
+        </script>
+    </head>
+    <body onload="onRotChange()">
+        <table>
+            <tr id="decoder-menu">
+                <td title="Decoder Home"><a href="javascript:goto('index')">🏠</a></td>
+                <td><a href="javascript:goto('Braille')">Braille</a></td>
+                <td><a href="javascript:goto('Morse')">Morse</a></td>
+                <td><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+                <td><a href="javascript:goto('PigPen')">Pig Pen</a></td>
+                <td><a href="javascript:goto('FiveBit')">Five Bit</a></td>
+                <td><a href="javascript:goto('Trinary')">Trinary</a></td>
+                <td><a href="javascript:goto('Nautical')">Nautical</a></td>
+                <td class="current">Rot</td>
+                <td><a href="javascript:goto('Ascii')">Ascii</a></td>
+                <td class="instruction-link" title="Instructions"><a href="javascript:toggleInstructions()">&#x2753;</a></td>
+            </tr>
+            <tr>
+                <td colspan="10">
+                    <p style="margin-bottom: 0px; margin-top: 0.25in; text-align: left;">Type any text.</p>
+                    <textarea id="SourceString" onkeyup="onSourceChange()"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="10" style="text-align: center;">
+                    How many steps to rotate?
+                    <select id="RotSelector" onchange="onRotChange()">
+                        <option value="All">All</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13" selected="selected">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="19">19</option>
+                        <option value="20">20</option>
+                        <option value="21">21</option>
+                        <option value="22">22</option>
+                        <option value="23">23</option>
+                        <option value="24">24</option>
+                        <option value="25">25</option>
+                    </select>
+                </td>
+            </tr>
+            <tr id="AllHide">
+                <td colspan="10">
+                    <textarea id="DestString" onkeyup="onDestChange()"></textarea>
+                </td>
+            </tr>
+            <tr id="AllOnly" style="display: none;">
+                <td colspan="10">
+                    <table id="AllRotations" style="width:100%;">
+                        <tr><th>1</th><td id="rot1"></td></tr>
+                        <tr><th>2</th><td id="rot2"></td></tr>
+                        <tr><th>3</th><td id="rot3"></td></tr>
+                        <tr><th>4</th><td id="rot4"></td></tr>
+                        <tr><th>5</th><td id="rot5"></td></tr>
+                        <tr><th>6</th><td id="rot6"></td></tr>
+                        <tr><th>7</th><td id="rot7"></td></tr>
+                        <tr><th>8</th><td id="rot8"></td></tr>
+                        <tr><th>9</th><td id="rot9"></td></tr>
+                        <tr><th>10</th><td id="rot10"></td></tr>
+                        <tr><th>11</th><td id="rot11"></td></tr>
+                        <tr><th>12</th><td id="rot12"></td></tr>
+                        <tr><th>13</th><td id="rot13"></td></tr>
+                        <tr><th>14</th><td id="rot14"></td></tr>
+                        <tr><th>15</th><td id="rot15"></td></tr>
+                        <tr><th>16</th><td id="rot16"></td></tr>
+                        <tr><th>17</th><td id="rot17"></td></tr>
+                        <tr><th>18</th><td id="rot18"></td></tr>
+                        <tr><th>19</th><td id="rot19"></td></tr>
+                        <tr><th>20</th><td id="rot20"></td></tr>
+                        <tr><th>21</th><td id="rot21"></td></tr>
+                        <tr><th>22</th><td id="rot22"></td></tr>
+                        <tr><th>23</th><td id="rot23"></td></tr>
+                        <tr><th>24</th><td id="rot24"></td></tr>
+                        <tr><th>25</th><td id="rot25"></td></tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="10" style="text-align: left;">
+                    <button id="clearStack" onclick="clearStack()">Clear</button>
+                </td>
+            </tr>
+        </table>
+        <div id="instructions" style="display: none;" onclick="toggleInstructions()">
+            <p>This decoder will shift each letter typed into another letter
+                <br>rotated some number of steps down the alphabet.
+                <br>If the step would go past Z, it loops back around to A.
+            </p>
+            <p>You may select a specific rotation amount: 1 to 25.
+                <br>Or you can try all rotations in parallel.
+            </p>
+            <p>Numbers and punctuation are not converted.
+            </p>
+        </div>
+</body>
+</html>

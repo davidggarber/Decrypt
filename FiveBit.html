@@ -1,0 +1,372 @@
+<html>
+    <head>
+        <link href="Decoder.css" rel="Stylesheet" type="text/css"></link>
+        <meta charset="UTF-8">
+        <title>Five Bit Decoder</title>
+        <style>
+            .area {
+                fill: transparent;
+                cursor:pointer;
+            }
+            .area:hover .diamond {
+                fill: #ff000011;
+            }
+            .diamond {
+                fill: white;
+                stroke: black;
+                stroke-width: 4px;
+            }
+            .area.selected .diamond {
+                fill: gray;
+            }
+            .bitText {
+                fill: #eeeeee;
+                stroke: black;
+                stroke-width: 1px;
+                font-size: 54px;
+                text-anchor: middle;
+            }
+            .area:hover .bitText {
+                fill: #ff000088;
+            }
+            #bitMath {
+                text-align: center;
+                font-size: 22pt;
+            }
+            .decimal {
+                font-size: 28pt;
+                vertical-align: -3pt;
+            }
+            .sixteen {
+                letter-spacing: -5px;
+            }
+            #fromAlpha {
+                height: 320px;
+            }
+            #AlphaToCode {
+                height: 320px;
+            }
+            #CodeToAlpha {
+                height: 320px;
+            }
+            #directionIndicator {
+                bottom: .5in;
+            }
+            .boxes {
+                font-size: 10pt;
+            }
+            .box16 {
+                font-size: 110%;
+                letter-spacing: -1px;
+            }
+            .box8 {
+                letter-spacing: -1px;                
+            }
+            .box4 {
+                font-size: 90%;
+                letter-spacing: -.5px;
+            }
+            .box2 {
+                font-size: 80%;
+                letter-spacing: -.5px;
+            }
+            .box1 {
+                font-size: 70%;
+                letter-spacing: -.5px;
+            }
+        </style>
+        <script src="DecoderUtils.js"></script>
+        <script>
+            var codeFormat = 'fivebit';
+
+            function clearPartial() {
+                updateBits(0);
+                clearMath();
+                setAlpha('');
+            }
+
+            function lookupAlpha(code) {
+                var letter = String.fromCharCode(64 + code);
+                if (letter < 'A' || letter > 'Z') {
+                    return '⛔';
+                }
+                return letter;
+            }
+
+            function lookupCode(alpha) {
+                var index = alpha.charCodeAt(0) - 64;
+                if (index < 1 || index > 26) {
+                    return 0;
+                }
+                return index;
+            }
+
+            function renderCode(code) {
+                return ['fivebit', make5BitSvg(code), make5BitUnicode(code, '1', '0')];
+            }
+
+            // ones could be '1' or '\u25a0' - filled square
+            // zero could be '0' or '\u25a1' - hollow square
+            function make5BitUnicode(code, one, zero) {
+                var str = '';
+                for (var bit = 16; bit >= 1; bit /= 2) {
+                    if (code >= bit) {
+                        str += one;
+                        code -= bit;
+                    }
+                    else {
+                        str += zero;
+                    }
+                }
+                return str;
+            }
+
+            function make5BitBoxSpans(code) {
+                var str = '<span class="boxes">';
+                for (var bit = 16; bit >= 1; bit /= 2) {
+                    str += '<span class="box' + bit + '">';
+                    if (code >= bit) {
+                        str += '\u25a0';  // filled square
+                        code -= bit;
+                    }
+                    else {
+                        str += '\u25a1';  // hollow square
+                    }
+                    str += '</span>';
+                }
+                str += '</span>';
+                return str;
+            }
+
+            const xmlns = "http://www.w3.org/2000/svg";
+            var glyphHeight = 24;
+            var boxWidth = 5;
+            var boxStep = 3;
+
+            function make5BitSvg(code) {
+                if (code == null) {
+                    return ' ';
+                }
+
+                var svg = document.createElementNS(xmlns, 'svg');
+                svg.classList.add('bits');
+                svg.setAttributeNS(null, 'width', 5 * boxWidth + 2);
+                svg.setAttributeNS(null, 'height', glyphHeight);
+
+                var left = 1;
+                var top = 1;
+                for (var bit = 16; bit >= 1; bit /= 2) {
+                    var box = document.createElementNS(xmlns, 'rect');
+                    box.setAttributeNS(null, 'x', left);
+                    box.setAttributeNS(null, 'width', boxWidth);
+                    box.setAttributeNS(null, 'y', top);
+                    box.setAttributeNS(null, 'height', glyphHeight - top - 1);
+                    box.setAttributeNS(null, 'rx', 2);
+                    box.setAttributeNS(null, 'ry', 2);
+                    box.setAttributeNS(null, 'fill', (code & bit) == 0 ? '#ffffff' : '#666666');
+                    box.setAttributeNS(null, 'stroke', 'black');
+                    box.setAttributeNS(null, 'stroke-width', '0.5px');
+                    svg.appendChild(box);
+                    left += boxWidth;
+                    top += boxStep;
+                }
+
+                return svg.outerHTML;
+            }
+
+            function createCode(alpha) {
+                var code = lookupCode(alpha);
+                updateBits(code);
+                updateMath(code);
+                setAlpha(code == 0 ? ' ' : alpha);
+            }
+
+            function codeFromKey(key) {
+                key = event.key.toLowerCase();
+                var index = 'qwert'.indexOf(key);
+                if (index < 0)
+                    return 0;
+                var bit = 16;
+                while (index-- > 0)
+                    bit /= 2;
+                return bit;
+            }
+
+            function codeKeyDown(evt) {
+                if (event.key.length == 1) {
+                    var bit = codeFromKey(event.key);
+                    if (bit != 0) {
+                        toggleBit(bit);
+                    }
+                }
+            }
+
+            function getCurrentCode() {
+                var code = 0;
+                for (var i = 1; i <= 16; i *= 2) {
+                    var area = document.getElementById('bit' + i);
+                    if (area.classList.contains('selected')) {
+                        code += i;
+                    }
+                }
+                return code;
+            }
+
+            function clearMath() {
+                var div = document.getElementById('bitMath');
+                div.innerHTML = "";
+            }
+
+            function updateMath(code) {
+                clearMath();
+                var str = '';
+                if (code >= 16) {
+                    str += '<span class="decimal sixteen">16</span>';  // 16 written diagonally, to emphasize it isn't 1 + 6
+                    code -= 16;
+                }
+                var bit = 8;
+                while (bit >= 1) {
+                    if (code >= bit) {
+                        if (str.length > 0) {
+                            str += ' + ';
+                        }
+                        str += '<span class="decimal">' + bit + '</span>';
+                        code -= bit;
+                    }
+                    bit /= 2;
+                }
+
+                var div = document.getElementById('bitMath');
+                div.innerHTML = str;
+            }
+
+            function toggleBit(bit) {
+                var area = document.getElementById('bit' + bit);
+                if (area.classList.contains('selected')) {
+                    area.classList.remove('selected');
+                }
+                else {
+                    area.classList.add('selected');
+                }
+                var code = getCurrentCode();
+                updateMath(code);
+                setAlpha(lookupAlpha(code));
+            }
+            
+            function updateBits(code) {
+                for (var bit = 1; bit <= 16; bit *= 2) {
+                    var area = document.getElementById('bit' + bit);
+                    if (area.classList.contains('selected') && (code & bit) == 0) {
+                        area.classList.remove('selected');
+                    }
+                    else if (!area.classList.contains('selected') && (code & bit) != 0) {
+                        area.classList.add('selected');
+                    }
+                }
+            }
+        </script>
+    </head>
+    <body onkeydown="keyDown()" onload="readUrl()">
+        <table id="decoder-menu">
+            <tr>
+                <td title="Decoder Home"><a href="javascript:goto('index')">🏠</a></td>
+                <td><a href="javascript:goto('Braille')">Braille</a></td>
+                <td><a href="javascript:goto('Morse')">Morse</a></td>
+                <td><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+                <td><a href="javascript:goto('PigPen')">Pig Pen</a></td>
+                <td class="current">Five Bit</td>
+                <td><a href="javascript:goto('Trinary')">Trinary</a></td>
+                <td><a href="javascript:goto('Nautical')">Nautical</a></td>
+                <td><a href="javascript:goto('RotCipher')">Rot</a></td>
+                <td><a href="javascript:goto('Ascii')">Ascii</a></td>
+                <td class="instruction-link" title="Instructions"><a href="javascript:toggleInstructions()">&#x2753;</a></td>
+            </tr>
+        </table>
+        <table id="InputTable">
+            <tr>
+                <td id="AlphaToCode" rowspan="2">
+                    <input type='text' id="fromAlpha" maxlength="1">
+                    <button id="fastButton" title="<Ctrl+Space>" onclick="toggleFast()">Auto</button>
+                </td>
+                <td id="BitField" style="width:370px; height:200px; position: relative;">
+                    <svg width="370" height="200">
+                        <g id="bit16" onmousedown="toggleBit(16)" class="area">
+                            <path class="diamond" d="M 5,55 L 55,5 L 105,55 L 55,105 Z"><title>Q</title></path>
+                            <text class="bitText" x="55" y="75">16</text>
+                        </g>
+                        <g id="bit8" onmousedown="toggleBit(8)" class="area" transform="translate(65,50)">
+                            <path class="diamond" d="M 5,55 L 55,5 L 105,55 L 55,105 Z"><title>W</title></path>
+                            <text class="bitText" x="55" y="75">8</text>
+                        </g>
+                        <g id="bit4" onmousedown="toggleBit(4)" class="area" transform="translate(130,0)">
+                            <path class="diamond" d="M 5,55 L 55,5 L 105,55 L 55,105 Z"><title>E</title></path>
+                            <text class="bitText" x="55" y="75">4</text>
+                        </g>
+                        <g id="bit2" onmousedown="toggleBit(2)" class="area" transform="translate(195,50)">
+                            <path class="diamond" d="M 5,55 L 55,5 L 105,55 L 55,105 Z"><title>R</title></path>
+                            <text class="bitText" x="55" y="75">2</text>
+                        </g>
+                        <g id="bit1" onmousedown="toggleBit(1)" class="area" transform="translate(260,0)">
+                            <path class="diamond" d="M 5,55 L 55,5 L 105,55 L 55,105 Z"><title>T</title></path>
+                            <text class="bitText" x="55" y="75">1</text>
+                        </g>
+                    </svg>
+                </td>
+                <td id="CodeToAlpha" style="width: 1em; border: dotted 1px lightgray;" rowspan="2">
+                    <span id="fromCode">&nbsp;</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="position: relative; vertical-align: top;">
+                    <div id="bitMath">
+
+                    </div>
+                    <div id="directionIndicator">
+                        <button id="leftDir" title="<Caps>" class="dirButton" onclick="reverseDecoder(false)">Text to 5-bit</button>
+                        <button id="rightDir" title="<Caps>" class="dirButton active" onclick="reverseDecoder(true)">5-bit to Text</button>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table style="width:95%">
+            <tr>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="saveButton" title="<Space>" onclick="saveStack(false)">Save</button>
+                    <br>
+                    <button id="clearStack" title="<Ctrl+Backspace>" onclick="clearStack()">Clear</button>
+                </td>
+                <td id="saveCode">
+                </td>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="clipCode" class="clipButton" onclick="clip('fivebit')">Copy Five Bit</button>
+                    <br>
+                    <button id="clipCode2" class="clipButton" onclick="clip('fivebit', 'data-text')">Copy 10101</button>
+                    <br>
+                    <button id="clipAlpha" class="clipButton" onclick="clip('alpha')">Copy Text</button>
+                    <br>
+                    <button id="pasteAlpha" class="clipButton" onclick="paste('alpha')">Paste Text</button>
+                </td>
+            </tr>
+        </table>
+        <div id="instructions" style="display: none;" onclick="toggleInstructions()">
+            <p>This decoder has two modes: converting from and to Five-Bit.
+                <br>Use CAPS LOCK to toggle between these modes.
+            </p>
+            <p>When converting <i>from</i> Five-Bit, the bit toggle buttons are on the left.
+                <br>You can either click on each to toggle them, or use the hot keys:
+                <span style="font-family: monospace; font-size: 16pt;">
+                <br>&nbsp;&nbsp;&nbsp;Q &nbsp;&nbsp;&nbsp; E &nbsp;&nbsp;&nbsp; T
+                <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; W &nbsp;&nbsp;&nbsp; R</span>
+            </p>
+            <p>When converting <i>to</i> Five-bit, the bit toggle buttons are on the right.
+                <br>Type any letter to see its Five-bit equivalent.
+                <br>Numbers and punctuation are not converted.
+            </p>
+            <p>In either mode, type SPACE to save the current letter and start a new one.
+                <br>Typing BACKSPACE will erase saved letters.
+                <br>Typing ESCAPE will simple clear all bits.
+                <br><i>AUTO</i> (ctrl+SPACE) mode means all typing converts immediately.
+            </p>
+        </div>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<html>
+    <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Cousine&family=Playfair+Display&display=swap" rel="stylesheet">
+        <link href="Decoder.css" rel="Stylesheet" type="text/css"></link>
+        <meta charset="UTF-8">
+        <title>Numeric Alphabet Decoder</title>
+        <style>
+            #fromAlpha {
+                height: 320px;
+            }
+            #AlphaToCode {
+                height: 320px;
+            }
+            #CodeToAlpha {
+                height: 320px;
+            }
+            #directionIndicator {
+                bottom: .5in;
+            }
+            .rot {
+                color: red;
+                font-weight: bold;
+            }
+            textarea {
+                width: 100%;
+                height: 1.5in;
+                font-size: 16pt;
+            }
+            #NumericString {
+                color: purple;
+                font-family: Cousine;
+            }
+            #TextString {
+                color: green;
+                font-family: 'Playfair Display';
+            }
+            #Ascii {
+                padding-left: 0.5in;
+            }
+        </style>
+        <script>
+            var codeFormat = 'rotcipher';
+            function goto(page) {
+                var url = page + '.html';
+                if (window.location.search.length > 0) {
+                    url += '?' + window.location.search;
+                }
+                window.location.href = url;
+            }
+            function nums2Text(nums, base, ascii) {
+                var text = '';
+                var words = nums.split('\n');
+                for (var w = 0; w < words.length; w++) {
+                    if (w > 0) {
+                        text += ' ';
+                    }
+                    var letters = words[w].split(' ');
+                    for (var i = 0; i < letters.length; i++) {
+                        var n = parseInt(letters[i], base);
+                        if (ascii) {
+                            text += String.fromCharCode(n);
+                        }
+                        else {
+                            if (n < 1 || n > 26) {
+                                text += '\u2b1a';
+                            }
+                            else {
+                                text += String.fromCharCode(96 + n);  // 1=a
+                            }
+                        }
+                    }
+                }
+                return text;
+            }
+            function text2Nums(text, base, ascii) {
+                var nums = '';
+                for (var i = 0; i < text.length; i++) {
+                    var code = text.charCodeAt(i);
+                    if (code == 0) {
+                        continue;
+                    }
+                    if (ascii) {
+                        if (code == 10) {
+                            nums += '\n';
+                        }
+                        else {
+                            var bcode = code.toString(base);
+                            nums += bcode + ' ';
+                        }
+                    }
+                    else if (code <= 32) {
+                        nums += '\n';
+                    }
+                    else if (code >= 65 && code <= 90) {
+                        var bcode = (code - 64).toString(base);
+                        nums += bcode + ' ';
+                    }
+                    else if (code >= 97 && code <= 122) {
+                        var bcode = (code - 96).toString(base);
+                        nums += bcode + ' ';
+                    }
+                }
+                return nums;
+            }
+            var fromNumeric = true;
+            function onSourceChange() {
+                var base = document.getElementById('BaseSelector').value;
+                var base = parseInt(base);
+                var nums = document.getElementById('NumericString').value;
+                var ascii = document.getElementById('Ascii');
+                var text = nums2Text(nums, base, ascii.checked);
+                document.getElementById('TextString').value = text;
+                fromNumeric = true;
+            }
+            function onDestChange() {
+                var base = document.getElementById('BaseSelector').value;
+                var base = parseInt(base);
+                var text = document.getElementById('TextString').value;
+                var ascii = document.getElementById('Ascii');
+                var nums = text2Nums(text, base, ascii.checked);
+                document.getElementById('NumericString').value = nums;
+                fromNumeric = false;
+            }
+            function onBaseChange() {
+                if (fromNumeric) {
+                    onSourceChange();
+                }
+                else {
+                    onDestChange();
+                }
+            }
+            function clearStack() {
+                document.getElementById('NumericString').value = '';
+                onBaseChange();
+                if (fromNumeric) {
+                    document.getElementById('NumericString').focus();
+                }
+                else {
+                    document.getElementById('TextString').focus();
+                }
+            }
+            function toggleInstructions(show) {
+                var instr = document.getElementById('instructions');
+                if (show == undefined) {
+                    show = instr.style.display == 'none';
+                }
+                if (show) {
+                    instr.style.display = '';
+                    instr.scrollIntoView();
+                }
+                else {
+                    instr.style.display = 'none';
+                }
+            }
+        </script>
+    </head>
+    <body onload="onBaseChange()">
+        <table>
+            <tr id="decoder-menu">
+                <td title="Decoder Home"><a href="javascript:goto('index')">🏠</a></td>
+                <td><a href="javascript:goto('Braille')">Braille</a></td>
+                <td><a href="javascript:goto('Morse')">Morse</a></td>
+                <td><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+                <td><a href="javascript:goto('PigPen')">Pig Pen</a></td>
+                <td><a href="javascript:goto('FiveBit')">Five Bit</a></td>
+                <td><a href="javascript:goto('Trinary')">Trinary</a></td>
+                <td><a href="javascript:goto('Nautical')">Nautical</a></td>
+                <td><a href="javascript:goto('RotCipher')">Rot</a></td>
+                <td class="current">Ascii</td>
+                <td class="instruction-link" title="Instructions"><a href="javascript:toggleInstructions()">&#x2753;</a></td>
+            </tr>
+            <tr>
+                <td colspan="11">
+                    <p style="margin-bottom: 0px; margin-top: 0.25in; text-align: left;">Type any numbers separated by spaces and line breaks.</p>
+                    <textarea id="NumericString" onkeyup="onSourceChange()"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="11" style="text-align: center;">
+                    Numbers are base-
+                    <select id="BaseSelector" onchange="onBaseChange()">
+                        <option value="10">10 - decimal</option>
+                        <option value="16">16 - hex</option>
+                        <option value="8">8 - octal</option>
+                        <option value="3">3 - trinary</option>
+                        <option value="2">2 - binary</option>
+                    </select>
+                    &nbsp;
+                    <input id="Ascii" type="checkbox" onchange="onBaseChange()"><label for="Ascii">ASCII / Unicode</label>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="11">
+                    <textarea id="TextString" onkeyup="onDestChange()"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="11" style="text-align: left;">
+                    <button id="clearStack" onclick="clearStack()">Clear</button>
+                </td>
+            </tr>
+        </table>
+        <div id="instructions" style="display: none;" onclick="toggleInstructions()">
+            <p>This decoder will shift any numbers into the corresponding
+                <br>letter of the alphabet. 1=A ... 26=Z.
+                <br>Or you may use other numeric bases.
+            </p>
+            <p>If the ASCII checkbox is checked, the Unicode numbers are used,
+                <br>where 65=A, 97=a, 33=!, etc.
+            </p>
+            <p>The spaces between the numbers are dropped.
+                <br>No other punctuation is allowed in the numeric section.
+            </p>
+            <p>When converting from text back to numbers, spaces are line breaks.
+                <br>In ASCII mode, spaces are 32.
+            </p>
+        </div>
+</body>
+</html>

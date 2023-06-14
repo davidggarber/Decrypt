@@ -1,0 +1,642 @@
+<html>
+    <head>
+        <link href="Decoder.css" rel="Stylesheet" type="text/css"></link>
+        <meta charset="UTF-8">
+        <title>Morse Decoder</title>
+        <style>
+            .area {
+                fill: transparent;
+                cursor:pointer;
+            }
+            .area:hover {
+                background-color: #ff000011;
+            }
+            .black {
+                fill: black;
+                stroke: none;
+            }
+            .touch {
+                fill: white;
+                stroke: black;
+                stroke-width: 5px;
+            }
+            .touchText {
+                fill: black;
+                text-anchor: middle;
+                font-size: 20pt;
+            }
+            #fromAlpha {
+                height: 320px;
+            }
+            #AlphaToCode {
+                height: 320px;
+            }
+            #CodeToAlpha {
+                height: 320px;
+            }
+            #directionIndicator {
+                bottom: .5in;
+            }
+            #morseFont {
+                font-size: 10pt;
+                width: 1in;
+                margin-top: .05in;
+                padding: .05in;                
+            }
+            .stack-only {
+                display: none;
+            }
+            .morseFont-stack .stack-only {
+                display: inline;
+            }
+            .linear-only {
+                display: none;
+            }
+            .morseFont-linear .linear-only {
+                display: inline;
+            }
+            .mid-only {
+                display: none;
+            }
+            .morseFont-mid .mid-only {
+                display: inline;
+            }
+            .slash-only {
+                display: none;
+            }
+            .morseFont-slash .slash-only {
+                display: inline;
+            }
+            .ascii-only {
+                display: none;
+            }
+            .morseFont-ascii .ascii-only {
+                display: inline;
+            }
+
+        </style>
+        <script src="DecoderUtils.js"></script>
+        <script>
+            var codeFormat = 'morse';
+
+            const MorseCodes = {
+                '':' ',
+                '.':'E', '-':'T',
+                '..':'I', '.-':'A', '-.':'N', '--':'M',
+                '...':'S', '..-':'U', '.-.':'R', '.--':'W', '-..':'D', '-.-':'K', '--.':'G', '---':'O', 
+                '....':'H', '...-':'V', '..-.':'F', '.-..':'L', '.--.':'P', '.---':'J', 
+                '-...':'B', '-..-':'X', '-.-.':'C', '-.--':'Y', '--..':'Z', '--.-':'Q', 
+                '.....':'5', '....-':'4', '...--':'3', '..---':'2', '.----':'1',
+                '-....':'6', '--...':'7', '---..':'8', '----.':'9', '-----':'0',
+                '.-.-.':'+', '-...-':'=', '-..-.':'/', '-....-':'-',
+                '-.-.-.':'.', '--..--':',', '..--..':'?', '---...':':', 
+                '.----.':"'", '.-..-.':'"', '.--.-.':'@',
+                '-.--.':'(', '-.--.-':')',
+            };
+
+            function lookupAlpha(code) {
+                return MorseCodes[code];
+            }
+
+            function lookupCode(alpha) {
+                for (var code of Object.keys(MorseCodes)) {
+                    if (MorseCodes[code] == alpha) {
+                        return code;
+                    }
+                }
+                return '';
+            }
+
+            const MorseFont = {
+                STACK: 0,
+                LINEAR: 1,
+                UNICODE: 2,
+                ASCII: 3,
+                SLASH: 4,
+                MAX: 5
+            };
+            var morseFont = MorseFont.LINEAR;
+            function nextMorseFont(mf) {
+                if (mf == undefined) {
+                    morseFont = (morseFont + 1) % MorseFont.MAX;
+                }
+                else {
+                    morseFont = mf;
+                }
+                // Refresh CSS
+                setRootMorseFont('stack', morseFont == MorseFont.STACK);
+                setRootMorseFont('linear', morseFont == MorseFont.LINEAR);
+                setRootMorseFont('mid', morseFont == MorseFont.UNICODE);
+                setRootMorseFont('ascii', morseFont == MorseFont.ASCII);
+                setRootMorseFont('slash', morseFont == MorseFont.SLASH);
+
+                //var sample = renderCode('.-');
+                //var fontBtn = document.getElementById('morseFont');
+                //fontBtn.innerHTML = 'Morse Font<br>' + sample[1];
+            }
+
+            function setRootMorseFont(style, on) {
+                var root = document.getElementById('saveCode');
+                style = 'morseFont-' + style;
+                if (on) {
+                    root.classList.add(style);
+                }
+                else {
+                    root.classList.remove(style);
+                }
+            }
+
+            const DDAscii = {
+                dot: '.',
+                dash: '-',
+            };
+            const DDSlash = {
+                dot: '\u00b7',  // middle dot
+                dash: '/',      // slash
+            };
+            const DDUnicode = {
+                dot: '\u22c5',  // multiplication-dot
+                dash: '\u002d', // minus-hyphen
+            };
+
+            function renderCode(code) {
+                return ['morse', makeMorseComposite(code), makeMorseUnicode(code)];
+            }
+
+            function makeMorseComposite(code) {
+                var stack = makeMorseSvgStack(code);
+                var linear = makeMorseSvgLinear(code);
+                var unicode = makeMorseSvgDD(code, DDUnicode);
+                var slash = makeMorseSvgDD(code, DDSlash);
+                var ascii = makeMorseSvgDD(code, DDAscii);
+                return '<div><span class="stack-only">' + stack + '</span>'
+                    + '<span class="linear-only">' + linear + '</span>'
+                    + '<span class="mid-only">' + unicode + '</span>'
+                    + '<span class="slash-only">' + slash + '</span>'
+                    + '<span class="ascii-only">' + ascii + '</span></div>'
+            }
+
+            function makeMorseUnicode(code) {
+                if (code == null) {
+                    return ' ';
+                }
+                var unicode = '';
+                for (var c of code) {
+                    unicode += c == '.' ? '\u22c5' : '\u002d';  // multiplication-dot or minus-hyphen
+                    // unicode += c == '.' ? '\u00b7' : '-';  // middle-dot or en-dash
+                }
+                return unicode;
+            }
+
+            const xmlns = "http://www.w3.org/2000/svg";
+
+            function makeMorseSvgStack(code) {
+                const glyphHeight = 24;
+                const dotWidth = 5;
+                const glyphWidth = dotWidth * 3 + 2;
+
+                if (code == null) {
+                    return ' ';
+                }
+
+                var svg = document.createElementNS(xmlns, 'svg');
+                svg.setAttributeNS(null, 'height', glyphHeight);
+
+                // FUTURE:
+                // Two layouts: Vertical for 1-4 strokes
+                // Or two-column for 5+
+                svg.setAttributeNS(null, 'width', glyphWidth);
+
+                var g = document.createElementNS(xmlns, 'g');
+                svg.appendChild(g);
+
+                var strokeHeight = 3;
+                var rowHeight = code.length > 4 ? 4 : 5;
+                var x = 0;
+                var y = code.length > 5 ? 0 : rowHeight;
+                var dotPrev = false;
+                for (var i = 0; i < code.length; i++) {
+                    var dot = code[i] == '.';
+
+                    var rect = document.createElementNS(xmlns, 'rect');
+                    rect.setAttributeNS(null, "y", y);
+                    rect.setAttributeNS(null, "height", strokeHeight);
+                    rect.setAttributeNS(null, "rx", 1);
+                    rect.setAttributeNS(null, "ry", 1);
+                    rect.setAttributeNS(null, "width", dotWidth * (dot ? 1 : 3));
+                    rect.setAttributeNS(null, "fill", 'black');
+                    rect.setAttributeNS(null, "stroke", 'none');
+
+                    var dotNext = (i < code.length - 1) && code[i + 1] == '.';
+                    if (!dot) {  // dash
+                        rect.setAttributeNS(null, "x", 1);
+                        y += rowHeight;
+                    }
+                    else if (!dotPrev && !dotNext) {  // single dot
+                        rect.setAttributeNS(null, "x", 1 + dotWidth);
+                        y += rowHeight;
+                    }
+                    else if (!dotPrev) {  // first of 2 dots
+                        rect.setAttributeNS(null, "x", 1);
+                        // y stays on same row
+                    }
+                    else {  // second of 2+ dots
+                        rect.setAttributeNS(null, "x", 1 + 2 * dotWidth);
+                        y += rowHeight;
+                        dot = false;  // even if next char is another dot, treat it as disconnected
+                    }
+                    g.appendChild(rect);
+                    dotPrev = dot;
+                }
+
+                // center vertically
+                y = (glyphHeight + 1 - y) / 2;
+                if (y != 0) {
+                    g.setAttributeNS(null, 'transform', 'translate(0,' + y + ')');
+                }
+                return svg.outerHTML;
+            }
+
+            function makeMorseSvgLinear(code) {
+                const glyphHeight = 7;
+                const dotWidth = 5;
+
+                if (code == null) {
+                    return ' ';
+                }
+
+                var svg = document.createElementNS(xmlns, 'svg');
+                svg.setAttributeNS(null, 'height', glyphHeight);
+
+                var g = document.createElementNS(xmlns, 'g');
+                svg.appendChild(g);
+
+                var x = 0;
+                var y = 1;
+                for (var i = 0; i < code.length; i++) {
+                    var dot = code[i] == '.';
+                    var width = dotWidth * (dot ? 1 : 3);
+                    var rect = document.createElementNS(xmlns, 'rect');
+                    rect.setAttributeNS(null, "x", x);
+                    rect.setAttributeNS(null, "y", y);
+                    rect.setAttributeNS(null, "height", dotWidth);
+                    rect.setAttributeNS(null, "rx", 2);
+                    rect.setAttributeNS(null, "ry", 2);
+                    rect.setAttributeNS(null, "width", width);
+                    rect.setAttributeNS(null, "fill", 'black');
+                    rect.setAttributeNS(null, "stroke", 'none');
+                    g.appendChild(rect);
+
+                    x += width + dotWidth;
+                }
+                var glyphWidth = Math.max(0, x - dotWidth);
+                svg.setAttributeNS(null, 'width', glyphWidth);
+                return svg.outerHTML;
+            }
+
+            // Unicode morse style, with configurable dashes and dots
+            function makeMorseSvgDD(code, dd) {
+                if (code == null) {
+                    return ' ';
+                }
+
+                var text = '';
+                for (var i = 0; i < code.length; i++) {
+                    var dot = code[i] == '.';
+                    text += dot ? dd.dot : dd.dash;
+                }
+                return '<nobr>' + text + '</nobr>';
+            }
+
+            function codeFromKey(key) {
+                key = event.key.toLowerCase();
+                if ('.`*e'.includes(key)) {
+                    return '.';
+                }
+                if ('-_~t'.includes(key)) {
+                    return '-';
+                }
+                return null;
+            }
+
+            function codeKeyDown(evt) {
+                if (event.key.length == 1) {
+                    var code = codeFromKey(event.key);
+                    if (code != null) {
+                        appendVal(code);
+                    }
+                }
+            }
+
+            // At the character level, Morse has two time lengths: 1 and 3 units.
+            // A 1-unit tap duration is a dot; a 3-unit duration is a dash.
+            // A 1-unit gap duration between signals is the dot/dash separator within one letter.
+            // A 3-unit gap is the letter-separator.
+            // For completeness, a 7-unit gap is the word-separator.
+
+            var downTime = null;
+            var upTime = null;
+            var downDuration = 0;
+            var taps = [];
+            var gaps = [];
+            const _defaultDotLen = 200;  // 0.2sec
+            const _keepTapCount = 12;
+            var unitTime = _defaultDotLen;
+
+            function isPointInId(x, y, id) {
+                var elmts = document.elementsFromPoint(x, y);
+                for (var i = 0; i < elmts.length; i++) {
+                    if (elmts[i].id == id) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // Track the last dozen or so tap durations. 
+            // Then try to divide them into short (1-unit) and long (3-unit) durations.
+            function touchDown() {
+                return;  // disable
+                if (!isPointInId(event.x, event.y, 'manualTap')) {
+                    downTime = null;
+                    return;
+                }
+                else {
+                    if (event.touches > 1) {
+                        convertDot2Dash();
+                    }
+                    else {
+                        appendVal(dot ? '.' : '-');
+                    }
+                }
+
+                var time = event.timeStamp;
+                if (upTime != null) {
+                    var duration = time - upTime;
+                    if (duration < 6 * unitTime) {
+                        gaps.push(duration);
+                        if (gaps.length > _keepTapCount) {
+                            gaps.splice(0, gaps.length - _keepTapCount);
+                        }
+                        evalDurations(gaps, false);
+                    }
+                }
+                downTime = time;
+            }
+
+            function touchUp() {
+                return;  // disabled for now
+                var time = event.timeStamp;
+                if (downTime != null) {
+                    var duration = time - downTime;
+                    taps.push(duration);
+                    if (taps.length > _keepTapCount) {
+                        taps.splice(0, taps.length - _keepTapCount);
+                    }
+                    evalDurations(taps, true);
+                    var dot = duration < (2 * unitTime);
+                    appendVal(dot ? '.' : '-');
+                }
+            }
+
+            function evalDurations(list, tap) {
+                // TODO: Try to lump the components of list into distinct groups of 1 and 3 units
+                // IDEA: Sort them, and then find the boundary.
+                //       Once found, evaluate how clean of a boundary it is
+                var sorted = [...list];
+                sorted.sort(function(a, b) { return a - b; });
+                // What is the first item that is >2* the first (smallest) item?
+                // Note that the list could, by coincidence, be all short or all long
+                var range = sorted[sorted.length - 1] / sorted[0];
+                if (range < 2) {
+                    // Everything appears to be the same
+                }
+                else {
+                    var prevRatio = 1;
+                    var buckets = {1:0};
+                    for (var i = 0; i < sorted.length; i++) {
+                        var ratio = Math.round(sorted[i] / sorted[0]);
+                        if (ratio > prevRatio) {
+                            buckets[ratio] = 1;
+                            prevRatio = ratio;
+                        }
+                        else {
+                            buckets[ratio]++;
+                        }
+                    }
+                    if (prevRatio > 4) {
+                        // The range is wider than we'd like. The best base unit could be bigger than the smallest
+                        // Use the median time within the shorter range
+                        var s = 0;
+                        for (var i = 0; i < prevRatio / 2; i++) {
+                            s += buckets[i] | 0;
+                        }
+                        unitTime = sorted[Math.trunc(s / 2)];
+                    }
+                    else {
+                        unitTime = sorted[0];
+                    }
+                }
+            }
+
+            function getCurrentCode() {
+                var svg = document.getElementById('combinedMorse');
+                var rects = svg.getElementsByClassName('black');
+                var code = '';
+                for (var r of rects) {
+                    if (r.getAttributeNS(null, 'width') == r.getAttributeNS(null, 'height')) {
+                        code += '.';
+                    }
+                    else {
+                        code += '-';
+                    }
+                }
+                return code;
+            }
+
+            function clearPartial() {
+                var svg = document.getElementById('combinedMorse');
+                while (svg.lastChild != null) {
+                    svg.removeChild(svg.lastChild);
+                }
+                setAlpha('');
+            }
+
+            function createCode(alpha) {
+                var code = lookupCode(alpha);
+                updateSvg(code);
+            }
+
+            function updateSvg(code) {
+                clearPartial();
+                var svg = document.getElementById('combinedMorse');
+                var y = 0;
+                var x = 0;
+                var size = 17;
+                for (var i = 0; i < code.length; i++) {
+                    var width = code[i] == '.' ? size : (size * 3);
+                    var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttributeNS(null, 'y', y);
+                    rect.setAttributeNS(null, 'height', size);
+                    rect.setAttributeNS(null, 'x', x);
+                    rect.setAttributeNS(null, 'width', width);
+                    rect.setAttributeNS(null, 'rx', size / 2);
+                    rect.setAttributeNS(null, 'ry', size / 2);
+                    rect.classList.add('black');
+                    x += width + size;
+                    svg.appendChild(rect);
+                }
+            }
+
+            function appendVal(val) {
+                var code = getCurrentCode();
+                if (code.length < 6) {
+                    code += val;
+                    updateSvg(code);
+                    var alpha = lookupAlpha(code);
+                    if (alpha == null) {
+                        setAlpha('⛔');
+                    }
+                    else {
+                        setAlpha(alpha);
+                    }
+                }
+            }
+
+            function onDotClick() {
+                appendVal('.');
+            }
+
+            function onDashClick() {
+                if (event.touches == undefined || event.touches == 1 || !convertDot2Dash()) {
+                    appendVal('-');
+                }
+            }
+
+            function convertDot2Dash() {
+                var code = getCurrentCode();
+                if (code.length == 0 || code[code.length - 1] != '.') {
+                    return false;
+                }
+
+                code = code.substring(0, code.length - 1) + '-';
+                updateSvg(code);
+                var alpha = lookupAlpha(code);
+                if (alpha == null) {
+                    setAlpha('⛔');
+                }
+                else {
+                    setAlpha(alpha);
+                }
+                return true;
+            }
+
+            function onLoad() {
+                readUrl();
+                nextMorseFont(morseFont);
+            }
+        </script>
+    </head>
+    <body onkeydown="keyDown()" onmousedown="touchDown()" onmouseup="touchUp()" onload="onLoad()">
+        <table id="decoder-menu">
+            <tr>
+                <td title="Decoder Home"><a href="javascript:goto('index')">🏠</a></td>
+                <td><a href="javascript:goto('Braille')">Braille</a></td>
+                <td class="current">Morse</td>
+                <td><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+                <td><a href="javascript:goto('PigPen')">Pig Pen</a></td>
+                <td><a href="javascript:goto('FiveBit')">Five Bit</a></td>
+                <td><a href="javascript:goto('Trinary')">Trinary</a></td>
+                <td><a href="javascript:goto('Nautical')">Nautical</a></td>
+                <td><a href="javascript:goto('RotCipher')">Rot</a></td>
+                <td><a href="javascript:goto('Ascii')">Ascii</a></td>
+                <td class="instruction-link" title="Instructions"><a href="javascript:toggleInstructions()">&#x2753;</a></td>
+            </tr>
+        </table>
+        <table id="InputTable">
+            <tr>
+                <td id="AlphaToCode" rowspan="2">
+                    <input type='text' id="fromAlpha" maxlength="1">
+                    <button id="fastButton" title="<Ctrl+Space>" onclick="toggleFast()">Auto</button>
+                </td>
+                <td id="dot" style="width:140;" onmousedown="onDotClick()" class="area">
+                    <svg width="100" height="100">
+                        <rect class="black" x="10" y="10" width="80" height="80" rx="40" ry="40"><title>Q</title></rect>
+                    </svg>
+                </td>
+                <td id="dash" style="width:260;" onmousedown="onDashClick()" ontouchstart="onDashClick()" class="area">
+                    <svg width="260" height="100">
+                        <rect class="black" x="10" y="10" width="240" height="80" rx="40" ry="40"><title>Q</title></rect>
+                    </svg>
+                </td>
+                <td id="CodeToAlpha" style="width: 1em; border: dotted 1px lightgray;" rowspan="2">
+                    <span id="fromCode">&nbsp;</span>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="position: relative;">
+                    <div style="text-align: left; display: none;">
+                        <svg id="manualTap" width="400" height="120">
+                            <rect class="touch" x="10" y="10" width="380" height="100" rx="10" ry="10"/>
+                            <text class="touchText" x="200" y="50">Tap 1 or 2 fingers</text>
+                            <text class="touchText" x="200" y="85">to manually input</text>
+                        </svg>
+                    </div>
+                    <svg id="combinedMorse" width="440" height="100">
+
+                    </svg>
+                    <div id="directionIndicator">
+                        <button id="leftDir" title="<Caps>" class="dirButton" onclick="reverseDecoder(false)">Text to Morse</button>
+                        <button id="rightDir" title="<Caps>" class="dirButton active" onclick="reverseDecoder(true)">Morse to Text</button>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table style="width:95%">
+            <tr>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="saveButton" title="<Space>" onclick="saveStack(false)">Save</button>
+                    <br>
+                    <button id="clearStack" title="<Ctrl+Backspace>" onclick="clearStack()">Clear</button>
+                    <button id="morseFont" onclick="nextMorseFont()">Morse Font</button>
+                </td>
+                <td id="saveCode" class="morseFont-stack">
+                </td>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="clipCode" class="clipButton" onclick="clip('morse')">Copy Morse</button>
+                    <br>
+                    <button id="clipCode2" class="clipButton" onclick="clip('morse', 'data-text')">Copy -.-.</button>
+                    <br>
+                    <button id="clipAlpha" class="clipButton" onclick="clip('alpha')">Copy Text</button>
+                    <br>
+                    <button id="pasteAlpha" class="clipButton" onclick="paste('alpha')">Paste Text</button>
+                </td>
+            </tr>
+        </table>
+        <div id="instructions" style="display: none;" onclick="toggleInstructions()">
+            <p>This decoder has two modes: converting from and to Morse.
+                <br>Use CAPS LOCK to toggle between these modes.
+            </p>
+            <p>When converting <i>from</i> Morse, the Morse dot/dash buttons are on the left.
+                <br>The assembled dot/dash sequence is shown below.
+                <br>You can click the buttons to send one or the other, or use the hot keys:
+                <span style="font-family: monospace;">
+                    <br>&nbsp;&nbsp;&nbsp;Dots:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>.</b>&nbsp;&nbsp; <b>`</b>&nbsp;&nbsp; <b>*</b>&nbsp;&nbsp; <b>e</b>
+                    <br>&nbsp;&nbsp;&nbsp;Dashes:&nbsp;&nbsp;     <b>-</b>&nbsp;&nbsp; <b>_</b>&nbsp;&nbsp; <b>,</b>&nbsp;&nbsp; <b>t</b>
+                </span>
+            </p>
+            <p>When converting <i>to</i> Morse, the Morse dot/dash buttons are on the right.
+                <br>Type any letter or number to see its Morse equivalent.
+            </p>
+            <p>In either mode, type SPACE to save the current letter and start a new one.
+                <br>Typing BACKSPACE will erase saved letters.
+                <br>Typing ESCAPE will simple clear any partial input.
+                <br><i>AUTO</i> (ctrl+SPACE) mode means all typing converts immediately.
+            </p>
+            <p>To use this tool for bulk encoding, use the URL:
+                <span style="font-family: monospace;">
+                    <br>&nbsp;&nbsp;&nbsp;.../Morse.html?alpha=your_text_here</p>
+                </span>
+        </div>
+</body>
+</html>

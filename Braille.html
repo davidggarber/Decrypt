@@ -1,0 +1,220 @@
+<html>
+    <head>
+        <link href="Decoder.css" rel="Stylesheet" type="text/css"></link>
+        <meta charset="UTF-8">
+        <title>Braille Decoder</title>
+        <style>
+            .bump {
+                fill: white;
+                stroke: black;
+                stroke-width: 4px;
+            }
+            .bump.filled {
+                fill: #666666;
+            }
+            #fromAlpha {
+                height: 600px;
+            }
+            .braille {
+                font-size: 20pt;
+            }
+        </style>
+        <script src="DecoderUtils.js"></script>
+        <script>
+            var codeFormat = 'braille';
+
+            function setDot(circle, on) {
+                if (on) {
+                    circle.classList.add('filled');
+                }
+                else {
+                    circle.classList.remove('filled');
+                }
+            }
+
+            function isDotFilled(circle) {
+                return circle.classList.contains('filled');
+            }
+
+            function toggleDot(circle) {
+                setDot(circle, !isDotFilled(circle));
+                calcAlpha();
+            }
+
+            const allDots = ['qDot', 'wDot', 'aDot', 'sDot', 'zDot', 'xDot'];
+
+            function createCode(alpha) {
+                var code = lookupCode(alpha);
+                if (code == null && alpha >= '0' && alpha <= '9') {
+                    var digit = String.fromCharCode(alpha.charCodeAt(0) - 17);
+                    code = lookupCode(digit);
+                }
+                for (var dot of allDots) {
+                    var on = code.includes(dot[0]);
+                    setDot(document.getElementById(dot), on);
+                }
+            }
+
+            function getCurrentCode() {
+                var code = '';
+                for (var i = 0; i < allDots.length; i++) {
+                    if (document.getElementById(allDots[i]).classList.contains('filled')) {
+                        code += allDots[i][0];
+                    }
+                }
+                return code;
+            }
+
+            function clearPartial() {
+                for (var i = 0; i < allDots.length; i++) {
+                    var dot = document.getElementById(allDots[i]);
+                    dot.classList.remove('filled');
+                }
+                setAlpha(' ');
+            }
+
+            function renderCode(code) {
+                return ['braille', makeBrailleUnicode(code)];
+            }
+
+            const brailleCodes = {
+                'q': 'A', 'qa': 'B', 'qw': 'C', 'qws': 'D', 'qs': 'E', 'qwa': 'F', 'qwas': 'G', 'qas': 'H', 'wa': 'I', 'was': 'J',
+                'qz': 'K', 'qaz': 'L', 'qwz': 'M', 'qwsz': 'N', 'qsz': 'O', 'qwaz': 'P', 'qwasz': 'Q', 'qasz': 'R', 'waz': 'S', 'wasz': 'T',
+                'qzx': 'U', 'qazx': 'V', 'wasx': 'W', 'qwzx': 'X', 'qwszx': 'Y', 'qszx': 'Z',
+                'wszx': '#', 'asx': '.', 'a': ',', 'az': ';', 'as': ':', 'asz': '!', 'azx': '?', '': ' ',
+            };
+
+            function lookupAlpha(code) {
+                return brailleCodes[code];
+            }
+
+            function lookupCode(alpha) {
+                for (var code of Object.keys(brailleCodes)) {
+                    if (brailleCodes[code] == alpha) {
+                        return code;
+                    }
+                }
+                return null;
+            }
+
+            const dotBits = { 'q':1, 'a':2, 'z':4, 'w':8, 's':16, 'x':32 };
+
+            function makeBrailleUnicode(code) {
+                if (code == null) {
+                    return ' ';
+                }
+                var bits = 0;
+                for (var dot of code) {
+                    bits += dotBits[dot];
+                }
+                if (bits == 0) {
+                    return '\u00a0';
+                }
+                return String.fromCharCode(0x2800 + bits);
+            }
+
+            function makeBrailleSVG(alpha) {
+                var code = lookupCode(alpha);
+                if (code == null) {
+                    return '';
+                }
+            }
+
+            const keyDots = {
+                'q': 'qDot', 'w': 'wDot', 'a': 'aDot', 's': 'sDot', 'z': 'zDot', 'x': 'xDot',
+                '7': 'qDot', '8': 'wDot', '4': 'aDot', '5': 'sDot', '1': 'zDot', '2': 'xDot',
+            };
+            function codeKeyDown(evt) {
+                if (evt.key.length == 1) {
+                    var key = event.key.toLowerCase();
+                    var id = keyDots[key];
+                    if (id != null) {
+                        var dot = document.getElementById(id);
+                        toggleDot(dot);
+                    }
+                }
+            }
+
+        </script>
+    </head>
+    <body onkeydown="keyDown()" onload="readUrl()">
+        <table id="decoder-menu">
+            <tr>
+                <td title="Decoder Home"><a href="javascript:goto('index')">🏠</a></td>
+                <td class="current">Braille</td>
+                <td><a href="javascript:goto('Morse')">Morse</a></td>
+                <td><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+                <td><a href="javascript:goto('PigPen')">Pig Pen</a></td>
+                <td><a href="javascript:goto('FiveBit')">Five Bit</a></td>
+                <td><a href="javascript:goto('Trinary')">Trinary</a></td>
+                <td><a href="javascript:goto('Nautical')">Nautical</a></td>
+                <td><a href="javascript:goto('RotCipher')">Rot</a></td>
+                <td><a href="javascript:goto('Ascii')">Ascii</a></td>
+                <td class="instruction-link" title="Instructions"><a href="javascript:toggleInstructions()">&#x2753;</a></td>
+            </tr>
+        </table>
+        <table id="InputTable">
+            <tr>
+                <td id="AlphaToCode">
+                    <input type='text' id="fromAlpha" maxlength="1">
+                    <button id="fastButton" title="<Ctrl+Space>" onclick="toggleFast()">Auto</button>
+                </td>
+                <td style="position: relative;">
+                    <svg width="360" height="450" viewbox="0 0 400 450">
+                        <circle id="qDot" class="bump" cx="75" cy="75" r="65" onmousedown="toggleDot(this)"><title>Q</title></circle>
+                        <circle id="aDot" class="bump" cx="75" cy="225" r="65" onmousedown="toggleDot(this)"><title>A</title></circle>
+                        <circle id="zDot" class="bump" cx="75" cy="375" r="65" onmousedown="toggleDot(this)"><title>Z</title></circle>
+                        <circle id="wDot" class="bump" cx="225" cy="75" r="65" onmousedown="toggleDot(this)"><title>W</title></circle>
+                        <circle id="sDot" class="bump" cx="225" cy="225" r="65" onmousedown="toggleDot(this)"><title>S</title></circle>
+                        <circle id="xDot" class="bump" cx="225" cy="375" r="65" onmousedown="toggleDot(this)"><title>X</title></circle>
+                    </svg>
+                    <div id="directionIndicator" style="position: relative; display: block;">
+                        <button id="leftDir" title="<Caps>" class="dirButton" onclick="reverseDecoder(false)">Text to Morse</button>
+                        <button id="rightDir" title="<Caps>" class="dirButton active" onclick="reverseDecoder(true)">Morse to Text</button>
+                    </div>
+                </td>
+                <td id="CodeToAlpha" style="width: 1em;">
+                    <span id="fromCode"></span>
+                </td>
+            </tr>
+        </table>
+        <table style="width:95%">
+            <tr>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="saveButton" title="<Space>" onclick="saveStack(false)">Save</button>
+                    <br>
+                    <button id="clearStack" title="<Ctrl+Backspace>" onclick="clearStack()">Clear</button>
+                </td>
+                <td id="saveCode">
+                </td>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="clipCode" class="clipButton" onclick="clip('braille')">Copy Braille</button>
+                    <br>
+                    <button id="clipAlpha" class="clipButton" onclick="clip('alpha')">Copy Text</button>
+                    <br>
+                    <button id="pasteAlpha" class="clipButton" onclick="paste('alpha')">Paste Text</button>
+                </td>
+            </tr>
+        </table>
+        <div id="instructions" style="display: none;" onclick="toggleInstructions()">
+            <p>This decoder has two modes: converting from and to Braille.
+                <br>Use CAPS LOCK to toggle between these modes.
+            </p>
+            <p>When converting <i>from</i> Braille, the Braille dots are on the left.
+                <br>You can either click on each to toggle them, or use the hot keys:
+                <span style="font-family: monospace; font-size: 16pt;">
+                <br>&nbsp;&nbsp;&nbsp;Q W&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;7 8
+                <br>&nbsp;&nbsp;&nbsp;A S&nbsp;&nbsp;&nbsp;or&nbsp;&nbsp;&nbsp;4 5
+                <br>&nbsp;&nbsp;&nbsp;Z X&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1 2</span>
+            </p>
+            <p>When converting <i>to</i> Braille, the Braille dots are on the right.
+                <br>Type any letter or number to see its Braille equivalent.
+            </p>
+            <p>In either mode, type SPACE to save the current letter and start a new one.
+                <br>Typing BACKSPACE will erase saved letters.
+                <br>Typing ESCAPE will simple clear all dots.
+                <br><i>AUTO</i> (ctrl+SPACE) mode means all typing converts immediately.
+            </p>
+        </div>
+</body>
+</html>

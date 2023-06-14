@@ -1,0 +1,474 @@
+<html>
+    <head>
+        <link href="Decoder.css" rel="Stylesheet" type="text/css"></link>
+        <meta charset="UTF-8">
+        <title>Pigpen Decoder</title>
+        <style>
+            .area {
+                cursor:pointer;
+                fill: transparent;
+            }
+            .field {
+                fill: white;
+            }
+            .selected .field {
+                fill: #eeeeff;
+            }
+            .edges {
+                stroke: black;
+                stroke-width: 2px;
+                stroke-linejoin: round;
+            }
+            .selected .edges {
+                stroke: blue;
+                stroke-width: 5px;
+            }
+            .dot {
+                fill: none;
+                stroke: none;
+            }
+            #toggle-dot .dot {
+                stroke: black;
+                stroke-width: 1px;
+            }
+            .showDot .dot {
+                fill: black;
+            }
+            .button {
+                stroke: black;
+                stroke-width: 2px;
+                fill: white;
+            }
+            .buttonText {
+                fill: black;
+                font-size: 20px;
+            }
+            .area:hover .field {
+                fill: #ff000011;
+            }
+            #bitMath {
+                text-align: center;
+                font-size: 20pt;
+            }
+            .decimal {
+                font-size: 24pt;
+                vertical-align: -3pt;
+            }
+            #fromAlpha {
+                height: 320px;
+            }
+            #AlphaToCode {
+                height: 320px;
+            }
+            #CodeToAlpha {
+                height: 320px;
+            }
+            .pigpen {
+                vertical-align: -1pt;
+            }
+            .pigpen .path {
+                stroke: black;
+                stroke-width: 4px;
+                stroke-linejoin: round;
+                fill: none;
+            }
+            .pigpen .dot {
+                fill: black;
+                stroke: none;
+            }
+        </style>
+        <script src="DecoderUtils.js"></script>
+        <script>
+            var codeFormat = 'pigpen';
+
+            function lookupAlpha(code) {
+                if (code <= 0)
+                    return ' ';
+                return String.fromCharCode(64 + code);
+            }
+
+            // Codes are from 1..26
+            function lookupCode(alpha) {
+                var code = alpha.charCodeAt(0) - 64;
+                if (code < 1 || code > 26) {
+                    return 0;
+                }
+                return code;
+            }
+
+            const xmlns = "http://www.w3.org/2000/svg";
+            var glyphHeight = 24;
+            var boxWidth = 9;
+
+            function renderCode(code) {
+                return ['pigpen', makePigpenSvg(code), makePigpenUnicode(code)];
+            }
+
+            var boxes = [
+                [''],
+                ['⌟', '\u27d3'], // A/J  ┘
+                ['⨆', '\u0307⨆'], // B/K
+                ['⌞', '\u27d4'], // C/L  └
+                ['⊐', '⊐'], // D/M
+                ['□', '\u25A3'], // E/N
+                ['⊏', '⊏'], // F/O
+                ['⌝', '⌝'], // G/P  ┐
+                ['⨅', '\u0329⨅'], // H/Q
+                ['⌜', '⌜'], // I/R  ┌
+                ['v', '\u27c7'], // S/W
+                ['>', '\u27d1'], // T/X
+                ['<', '\u27d1'], // U/Y
+                ['^', '\u27d1'], // V/Z
+            ];
+
+            function makePigpenUnicode(code) {
+                var index = indexFromCode(code);
+                var box = boxes[index][dotFromCode(code) ? 1 : 0];
+                return box;
+            }
+
+            var patterns = [
+                '',
+                '139', // A/J
+                '7139', // B/K
+                '713', // C/L
+                '7931', // D/M
+                '79317', // E/N
+                '9713', // F/O
+                '793', // G/P
+                '1793', // H/Q
+                '179', // I/R
+                '729', // S/W
+                '761', // T/X
+                '943', // U/Y
+                '183', // V/Z
+            ];
+
+            function makePigpenSvg(code) {
+                if (code == null) {
+                    return ' ';
+                }
+
+                var index = indexFromCode(code);
+                var pat = patterns[index];
+
+                var svg = document.createElementNS(xmlns, 'svg');
+                svg.classList.add('pigpen');
+                svg.setAttributeNS(null, 'width', glyphHeight);
+                svg.setAttributeNS(null, 'height', glyphHeight);
+
+                var d = '';
+                for (var i = 0; i < pat.length; i++) {
+                    if (i >= 4) {
+                        d += ' Z';  // close the shape
+                        break;
+                    }
+                    var patCode = pat[i] - '1';
+                    var x = (patCode % 3) - 1;
+                    var y = 1 - Math.trunc(patCode / 3);
+                    
+                    d += (d.length == 0) ? 'M ' : ' L ';
+                    d += (glyphHeight / 2 + x * boxWidth) + ' ' + (glyphHeight / 2 + y * boxWidth);
+                }
+
+                var path = document.createElementNS(xmlns, 'path');
+                path.setAttributeNS(null, 'd', d);
+                path.classList.add('path');
+                svg.appendChild(path);
+
+                if (dotFromCode(code)) {
+                    var cx = 0;
+                    var cy = 0;
+                    if (index >= 10) {
+                        var patCode = pat[1] - 1;
+                        cx = 1 - (patCode % 3);
+                        cy = Math.trunc(patCode / 3) - 1;
+                    }
+                    var circle = document.createElementNS(xmlns, 'circle');
+                    circle.setAttributeNS(null, 'cx', glyphHeight / 2 + cx * (boxWidth - 1));
+                    circle.setAttributeNS(null, 'cy', glyphHeight / 2 + cy * (boxWidth - 1));
+                    circle.setAttributeNS(null, 'r', 3);
+                    circle.classList.add('dot');
+                    svg.appendChild(circle);
+                }
+
+                return svg.outerHTML;
+            }
+
+            function createCode(alpha) {
+                var code = lookupCode(alpha);                
+                updatePigpen(code);
+                setAlpha(code == 0 ? ' ' : alpha);
+            }
+
+            var mnemonic = 'qweasdzxcijkm';
+
+            function codeFromKey(key) {
+                key = event.key.toLowerCase();
+                return mnemonic.indexOf(key) + 1;
+            }
+
+            var dotMnemonics = '.,/';
+
+            function codeKeyDown(evt) {
+                if (event.key.length == 1) {
+                    if (dotMnemonics.indexOf(event.key) >= 0) {
+                        toggleDot();
+                    }
+                    else {
+                        var box = codeFromKey(event.key);
+                        if (box > 0) {
+                            setPigpen(box);
+                        }
+                    }
+                }
+            }
+
+            function getCurrentIndex() {
+                var index = 0;
+                for (var i = 1; i <= 13; i++) {
+                    var area = document.getElementById('pen-' + i);
+                    if (area.classList.contains('selected')) {
+                        return i;
+                    }
+                }
+                return 0;
+            }
+
+            function indexFromCode(code) {
+                if (code >= 19) {
+                    code -= 19;
+                    code %= 4;
+                    return code + 10;
+                }
+                code -= 1;
+                code %= 9;
+                return code + 1;
+            }
+
+            function dotFromCode(code) {
+                return (code >= 10 && code <= 18)
+                    || (code >= 23 && code <= 26);
+            }
+
+            function getCurrentCode() {
+                var code = 0;
+                var dot = isDotOn();
+                var index = getCurrentIndex();
+
+                if (index <= 0) {
+                    return 0;
+                }
+                if (index < 10) {
+                    return dot ? (9 + index) : index;
+                }
+                index -= 9;
+                return dot ? (22 + index) : (18 + index);
+            }
+
+            function toggleDot() {
+                var td = document.getElementById('PigPenGrid');
+                if (isDotOn()) {
+                    td.classList.remove("showDot");
+                }
+                else {
+                    td.classList.add("showDot");
+                }
+                var code = getCurrentCode();
+                setAlpha(lookupAlpha(code));
+            }
+
+            function isDotOn() {
+                var td = document.getElementById('PigPenGrid');
+                return td.classList.contains("showDot");
+            }
+
+            function clearPartial() {
+                setPigpen(0);
+            }
+            
+            function setPigpen(index) {
+                selectPigpen(index);
+                var code = getCurrentCode();
+                setAlpha(lookupAlpha(code));
+            }
+
+            function selectPigpen(index) {
+                for (var i = 1; i <= 13; i++) {
+                    var area = document.getElementById('pen-' + i);
+                    if (i == index) {
+                        area.classList.add('selected');
+                    }
+                    else {
+                        area.classList.remove('selected');
+                    }
+                }
+            }
+
+            function updatePigpen(code) {
+                var index = indexFromCode(code);
+                var dot = dotFromCode(code);
+                selectPigpen(index);
+                if (dot != isDotOn()) {
+                    toggleDot();
+                }
+            }
+        </script>
+    </head>
+    <body onkeydown="keyDown()" onload="readUrl()">
+        <table id="decoder-menu">
+            <tr>
+                <td title="Decoder Home"><a href="javascript:goto('index')">🏠</a></td>
+                <td><a href="javascript:goto('Braille')">Braille</a></td>
+                <td><a href="javascript:goto('Morse')">Morse</a></td>
+                <td><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+                <td class="current">Pig Pen</td>
+                <td><a href="javascript:goto('FiveBit')">Five Bit</a></td>
+                <td><a href="javascript:goto('Trinary')">Trinary</a></td>
+                <td><a href="javascript:goto('Nautical')">Nautical</a></td>
+                <td><a href="javascript:goto('RotCipher')">Rot</a></td>
+                <td><a href="javascript:goto('Ascii')">Ascii</a></td>
+                <td class="instruction-link" title="Instructions"><a href="javascript:toggleInstructions()">&#x2753;</a></td>
+            </tr>
+        </table>
+        <table id="InputTable">
+            <tr>
+                <td id="AlphaToCode" rowspan="2">
+                    <input type='text' id="fromAlpha" maxlength="1">
+                    <button id="fastButton" title="<Ctrl+Space>" onclick="toggleFast()">Auto</button>
+                </td>
+                <td id="PigPenGrid" style="width:450px; height:250px; position: relative;">
+                    <svg width="450" height="250">
+                        <g id="pen-1" onmousedown="setPigpen(1)" class="area square" transform="translate(0,0)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 6 74 L 74 74 L 74 6" class="edges" ><title>Q</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-2" onmousedown="setPigpen(2)" class="area square" transform="translate(80,0)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 6 6 L 6 74 L 74 74 L 74 6" class="edges" ><title>W</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-3" onmousedown="setPigpen(3)" class="area square" transform="translate(160,0)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 6 6 L 6 74 L 74 74" class="edges" ><title>E</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+
+                        <g id="pen-4" onmousedown="setPigpen(4)" class="area square" transform="translate(0,80)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 6 74 L 74 74 L 74 6 L 6 6" class="edges" ><title>A</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-5" onmousedown="setPigpen(5)" class="area square" transform="translate(80,80)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 6 6 L 6 74 L 74 74 L 74 6 Z" class="edges" ><title>S</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-6" onmousedown="setPigpen(6)" class="area square" transform="translate(160,80)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 74 6 L 6 6 L 6 74 L 74 74" class="edges" ><title>D</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+
+                        <g id="pen-7" onmousedown="setPigpen(7)" class="area square" transform="translate(0,160)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 6 6 L 74 6 L 74 74" class="edges" ><title>Z</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-8" onmousedown="setPigpen(8)" class="area square" transform="translate(80,160)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 6 74 L 6 6 L 74 6 L 74 74" class="edges" ><title>X</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-9" onmousedown="setPigpen(9)" class="area square" transform="translate(160,160)">
+                            <rect x="5" y="5" width="70" height="70" rx="5" ry="5" class="field" />
+                            <path d="M 6 74 L 6 6 L 74 6" class="edges" ><title>C</title></path>
+                            <circle cx="40" cy="40" r="5" class="dot"/>
+                        </g>
+
+                        <g id="pen-10" onmousedown="setPigpen(10)" class="area diamond" transform="translate(300,0)">
+                            <polygon points="50,7 7,50 50,93 93,50" class="field" />
+                            <path d="M 7 50 L 50 93 L 93 50" class="edges" ><title>I</title></path>
+                            <circle cx="50" cy="50" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-11" onmousedown="setPigpen(11)" class="area diamond" transform="translate(250,50)">
+                            <polygon points="50,7 7,50 50,93 93,50" class="field" />
+                            <path d="M 50 7 L 93 50 L 50 93" class="edges" ><title>J</title></path>
+                            <circle cx="50" cy="50" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-12" onmousedown="setPigpen(12)" class="area diamond" transform="translate(350,50)">
+                            <polygon points="50,7 7,50 50,93 93,50" class="field" />
+                            <path d="M 50 7 L 7 50 L 50 93" class="edges" ><title>K</title></path>
+                            <circle cx="50" cy="50" r="5" class="dot"/>
+                        </g>
+                        <g id="pen-13" onmousedown="setPigpen(13)" class="area diamond" transform="translate(300,100)">
+                            <polygon points="50,7 7,50 50,93 93,50" class="field" />
+                            <path d="M 7 50 L 50 7 L 93 50" class="edges" ><title>M</title></path>
+                            <circle cx="50" cy="50" r="5" class="dot"/>
+                        </g>
+
+                        <g id="toggle-dot" onmousedown="toggleDot()" class="area" transform="translate(250,195)">
+                            <rect x="25" width="150" y="0" height="40" rx="20" ry="20" class="button field" ><title>.</title></rect>
+                            <circle cx="150" cy="20" r="5" class="dot"><title>.</title></circle>
+                            <text class="buttonText" x="50" y="28">Toggle</text>
+                        </g>
+                    </svg>
+                </td>
+                <td id="CodeToAlpha" style="width: 1em; border: dotted 1px lightgray;" rowspan="2">
+                    <span id="fromCode">&nbsp;</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="position: relative; vertical-align: top; height: 75px;">
+                    <div id="bitMath">
+
+                    </div>
+                    <div id="directionIndicator" style="top:50px;">
+                        <button id="leftDir" title="<Caps>" class="dirButton" onclick="reverseDecoder(false)">Text to PigPen</button>
+                        <button id="rightDir" title="<Caps>" class="dirButton active" onclick="reverseDecoder(true)">PigPen to Text</button>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table style="width:95%">
+            <tr>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="saveButton" title="<Space>" onclick="saveStack(false)">Save</button>
+                    <br>
+                    <button id="clearStack" title="<Ctrl+Backspace>" onclick="clearStack()">Clear</button>
+                </td>
+                <td id="saveCode">
+                </td>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="clipCode" class="clipButton" onclick="clip('pigpen')">Copy Pigpen</button>
+                    <br>
+                    <button id="clipAlpha" class="clipButton" onclick="clip('alpha')">Copy Text</button>
+                    <br>
+                    <button id="pasteAlpha" class="clipButton" onclick="paste('alpha')">Paste Text</button>
+                </td>
+            </tr>
+        </table>
+        <div id="instructions" style="display: none;" onclick="toggleInstructions()">
+            <p>This decoder has two modes: converting from and to PigPen.
+                <br>Use CAPS LOCK to toggle between these modes.
+            </p>
+            <p>When converting <i>from</i> PigPen, the alphabet grids are on the left.
+                <br>You can click on any cell to select it, or use the hot keys:
+                <span style="font-family: monospace; font-size: 16pt;">
+                <br>&nbsp;&nbsp;Q&nbsp;&nbsp;W&nbsp;&nbsp;E&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;I
+                <br>&nbsp;&nbsp;A&nbsp;&nbsp;S&nbsp;&nbsp;D&nbsp;&nbsp;&nbsp;&nbsp;J&nbsp;&nbsp;&nbsp;K
+                <br>&nbsp;&nbsp;Z&nbsp;&nbsp;X&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;M&nbsp;&nbsp;&nbsp;&nbsp;.
+            </p>
+            <p>When converting <i>to</i> PigPen, the alphabet grids are on the right.
+                <br>Type any letter to see its PigPen equivalent.
+                <br>Numbers and punctuation are not converted.
+            </p>
+            <p>In either mode, type SPACE to save the current letter and start a new one.
+                <br>Typing BACKSPACE will erase saved letters.
+                <br>Typing ESCAPE will simple clear the selection.
+                <br><i>AUTO</i> (ctrl+SPACE) mode means all typing converts immediately.
+            </p>
+        </div>
+</body>
+</html>

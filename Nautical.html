@@ -1,0 +1,1384 @@
+<html>
+    <head>
+        <link href="Decoder.css" rel="Stylesheet" type="text/css"></link>
+        <meta charset="UTF-8">
+        <title>Nautical Flag Decoder</title>
+        <style>
+            #FlagUI {
+                width:400px; 
+                height: 280px; 
+                vertical-align: top; 
+                position: relative; 
+                background-color: #bbb;
+            }
+            #flagCandidates {
+                height: 300px;
+            }
+            .ToAlpha #flagCandidates {
+                display: block;
+                height: 150px;
+            }
+            .flag {
+                padding: 1px;
+                background-color: none; 
+                }
+            .flag .border {
+                fill: none;
+                stroke: #0002;
+                stroke-width: 1px;
+                stroke-linejoin: round;
+            }
+            .traitText {
+                fill: black;
+                stroke: none;
+                font-size: 10pt;
+                text-anchor: middle;
+            }
+            .area {
+                fill: transparent;
+                cursor:pointer;
+            }
+            .area:hover .hoverable {
+                stroke-width: 4px;
+            }
+            .moreShapes {
+                display: none;
+                margin-left: .25in;
+                width: 210px;
+            }
+            .moreShapes svg {
+                background-color: #ddd;
+            }
+            .moreShapes.show {
+                display: block;
+            }
+            .moreShapes .hoverable {
+                fill: #fff2;
+            }
+            .moreShapes .noshade {
+                fill: #fff3;
+            }
+            .moreShapes .lightshade {
+                fill: #0002;
+                stroke-linejoin: round;
+            }
+            .none {
+                padding: .25in;
+                font-size: 36pt;
+            }
+        </style>
+        <script src="DecoderUtils.js"></script>
+        <script>
+            var codeFormat = 'nautical';
+
+            const FF = {  // FlagFeatures
+                None: 0x0,
+                Vert: 0x1,
+                Horz: 0x2,
+                Diag: 0x4,
+                Middle: 0x8,
+                Square: 0x10,
+                Cross: 0x20,  // Plus or Times
+                Solid: 0x40,
+                Cutout: 0x80,
+                Penant: 0x100,
+                FirstMask: 0xfff,
+
+                V2: 0x1001,
+                V3: 0x2001,
+                V6: 0x4001,
+                CutoutA: 0x081,
+                H2: 0x1002,
+                H3: 0x2002,
+                H5: 0x4002,
+                DTri2: 0x1004,
+                DTri4: 0x2004,
+                DStripe: 0x4004,
+                MCircle: 0x1008,
+                MDiamond: 0x2008,
+                MSquare2: 0x4018,
+                MSquare3: 0x8018,
+                SBig: 0x1010,
+                SSmall: 0x2010,
+                CPlus: 0x1020,
+                CTimes: 0x2020,
+                TrueSolid: 0x1040,
+                CutoutB: 0x0c0,
+                PenantCircle: 0x1108,
+                PenantCross: 0x1120,
+                PenantH2: 0x1102,
+                PenantV: 0x0101,
+                PenantV2: 0x1101,
+                PenantV3: 0x2101,
+                PenantV5: 0x8101,
+                PenantCorners: 0x1110,
+                SecondMask: 0xf180,
+            };
+
+            const FC = {  // FlagColors
+                Red: 0x1,
+                Yellow: 0x2,
+                Blue: 0x4,
+                White: 0x8,
+                Black: 0x10,
+            };
+
+            //FUTURE: redo this the arguments passed to makeNauticalSvg
+            const NauticalTraits = {
+                '': { features: 0, colors: 0, complexity: 0 },
+                'A': { alpha:'A', features: FF.CutoutA, colors: FC.White | FC.Blue, complexity: 2 },
+                'B': { alpha:'B', features: FF.CutoutB, colors: FC.Red, complexity: 1 },
+                'C': { alpha:'C', features: FF.H5, colors: FC.White | FC.Blue | FC.Red, complexity: 5 },
+                'D': { alpha:'D', features: FF.H3, colors: FC.Yellow | FC.Blue, complexity: 3 },
+                'E': { alpha:'E', features: FF.H2, colors: FC.Blue | FC.Red, complexity: 2 },
+                'F': { alpha:'F', features: FF.MDiamond, colors: FC.Red | FC.White, complexity: 1 },
+                'G': { alpha:'G', features: FF.V6, colors: FC.Yellow | FC.Blue, complexity: 6 },
+                'H': { alpha:'H', features: FF.V2, colors: FC.Red | FC.White, complexity: 2 },
+                'I': { alpha:'I', features: FF.MCircle, colors: FC.Black | FC.Yellow, complexity: 1 },
+                'J': { alpha:'J', features: FF.H3, colors: FC.Blue | FC.White, complexity: 3 },
+                'K': { alpha:'K', features: FF.V2, colors: FC.Yellow | FC.Blue, complexity: 2 },
+                'L': { alpha:'L', features: FF.SBig, colors: FC.Yellow | FC.Black, complexity: 4 },
+                'M': { alpha:'M', features: FF.CTimes, colors: FC.Blue | FC.White, complexity: 1 },
+                'N': { alpha:'N', features: FF.SSmall, colors: FC.Blue | FC.White, complexity: 16 },
+                'O': { alpha:'O', features: FF.DTri2, colors: FC.Red | FC.Yellow, complexity: 2 },
+                'P': { alpha:'P', features: FF.MSquare2, colors: FC.White | FC.Blue, complexity: 2 },
+                'Q': { alpha:'Q', features: FF.TrueSolid, colors: FC.Yellow, complexity: 0 },
+                'R': { alpha:'R', features: FF.CPlus, colors: FC.Red | FC.Yellow, complexity: 1 },
+                'S': { alpha:'S', features: FF.MSquare2, colors: FC.White | FC.Blue, complexity: 2 },
+                'T': { alpha:'T', features: FF.V3, colors: FC.Red | FC.White | FC.Blue, complexity: 3 },
+                'U': { alpha:'U', features: FF.SBig, colors: FC.Red | FC.White, complexity: 4 },
+                'V': { alpha:'V', features: FF.CTimes, colors: FC.Red | FC.White, complexity: 1 },
+                'W': { alpha:'W', features: FF.MSquare3, colors: FC.White | FC.Blue | FC.Red, complexity: 3 },
+                'X': { alpha:'X', features: FF.CPlus, colors: FC.White | FC.Blue, complexity: 1 },
+                'Y': { alpha:'Y', features: FF.DStripe, colors: FC.Red | FC.Yellow, complexity: 10 },
+                'Z': { alpha:'Z', features: FF.DTri4, colors: FC.Black | FC.Red | FC.Blue | FC.Yellow, complexity: 4 },
+                '0': { alpha:'0', features: FF.PenantV3, colors: FC.Yellow | FC.Red, complexity: 3 },
+                '1': { alpha:'1', features: FF.PenantCircle, colors: FC.Red | FC.White, complexity: 1 },
+                '2': { alpha:'2', features: FF.PenantCircle, colors: FC.White | FC.Blue, complexity: 1 },
+                '3': { alpha:'3', features: FF.PenantV3, colors: FC.Red | FC.White | FC.Blue, complexity: 3 },
+                '4': { alpha:'4', features: FF.PenantCross | FF.Triangle, colors: FC.Red | FC.White, complexity: 1 },
+                '5': { alpha:'5', features: FF.PenantV2 | FF.Triangle, colors: FC.Blue | FC.Yellow, complexity: 1 },
+                '6': { alpha:'6', features: FF.PenantH2, colors: FC.Black | FC.White, complexity: 2 },
+                '7': { alpha:'7', features: FF.PenantH2, colors: FC.Yellow | FC.Red, complexity: 2 },
+                '8': { alpha:'8', features: FF.PenantCross, colors: FC.White | FC.Red, complexity: 1 },
+                '9': { alpha:'9', features: FF.PenantCorners, colors: FC.White | FC.Black | FC.Red | FC.Yellow, complexity: 4 },
+            }
+
+            var natoAlphabet = [
+                'Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo',
+                'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliet',
+                'Kilo', 'Lima', 'Mike', 'November', 'Oscar',
+                'Papa', 'Quebec', 'Romeo', 'Sierra', 'Tango',
+                'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yankee', 'Zulu',
+                'Wun', 'Too', 'Tree', 'Fower', 'Fife',
+                'Six', 'Seven', 'Ait', 'Niner', 'Zeero'
+            ];
+
+            function clearPartial() {
+                setAlpha('');
+                curFlag = '';
+                showFlagMatch('', 0);
+                setFlagFeature(FF.None);
+                setFlagColor(FC.White, false);
+                setFlagColor(FC.Red, false);
+                setFlagColor(FC.Yellow, false);
+                setFlagColor(FC.Blue, false);
+                setFlagColor(FC.Black, false);
+            }
+
+            // In this context, the code is the letter
+            function lookupAlpha(code) {
+                return code;
+            }
+
+            function matchingFilter()
+            {
+                var match = [];
+                for (var i = 0; i < 36; i++) {  // TODO: 36 for numerical
+                    var letter = String.fromCharCode((i < 26 ? 65 : 22) + i);
+                    var nt = NauticalTraits[letter];
+                    if ((nt.features & ffFilter) == ffFilter && (nt.colors & fcFilter) == fcFilter) {
+                        match.push(nt);
+                    }
+                }
+                return match;
+            }
+
+            function lookupCode(alpha) {
+                var index = alpha.charCodeAt(0) - 65;
+                if (index > 26) {
+                    index = alpha.charCodeAt(0) - 97;
+                }
+                if (index >= 0 && index < 26) {
+                    return String.fromCharCode(65 + index);
+                }
+                index = alpha.charCodeAt(0) - 48;
+                if (index >= 0 && index < 10) {
+                    return String.fromCharCode(48 + index);
+                }
+                return 0;
+            }
+
+            function renderCode(code) {
+                return ['nautical', makeNauticalSvg(code), makeNatoUnicode(code)];
+            }
+
+            // ones could be '1' or '\u25a0' - filled square
+            // zero could be '0' or '\u25a1' - hollow square
+            function makeNatoUnicode(code) {
+                if (code >= 'A' && code <= 'Z') {
+                    return natoAlphabet[code.charCodeAt(0) - 65];
+                }
+                if (code >= 'z' && code <= 'z') {
+                    return natoAlphabet[code.charCodeAt(0) - 97].toLocaleLowerCase();
+                }
+                if (code >= '0' && code <= '9') {
+                    return natoAlphabet[code.charCodeAt(0) - 48 + 26];
+                }
+                return ' ';
+            }
+
+            const xmlns = "http://www.w3.org/2000/svg";
+            var glyphHeight = 24;
+            var glyphWidth = 32;
+
+            function makeNauticalSvg(code) {
+                if (code == null) {
+                    return ' ';
+                }
+                var g = makeNauticalG(code);
+                if (g == null) {
+                    return ' ';
+                }
+
+                var svg = document.createElementNS(xmlns, 'svg');
+                svg.classList.add('flag');
+                svg.setAttributeNS(null, 'width', glyphWidth);
+                svg.setAttributeNS(null, 'height', glyphHeight);
+                svg.appendChild(g);
+                return svg.outerHTML;
+            }
+
+            function makeNauticalG(code) {
+                switch (code) {
+                    case 'A':
+                        return makeCutout(['white', 'blue']);
+                    case 'B':
+                        return makeCutout(['red']);
+                    case 'C':
+                        return makeHorz(['blue', 'white', 'red', 'white', 'blue']);
+                    case 'D':
+                        return makeHorz(['yellow', 'blue', 'blue', 'yellow']);
+                    case 'E':
+                        return makeHorz(['blue', 'red']);
+                    case 'F':
+                        return makeCenter('diamond', ['red', 'white']);
+                    case 'G':
+                        return makeVert(['yellow', 'blue', 'yellow', 'blue', 'yellow', 'blue']);
+                    case 'H':
+                        return makeVert(['white', 'red']);
+                    case 'I':
+                        return makeCenter('circle', ['black', 'yellow']);
+                    case 'J':
+                        return makeHorz(['blue', 'white', 'blue']);
+                    case 'K':
+                        return makeVert(['yellow', 'blue']);
+                    case 'L':
+                        return makeSquares(['yellow', 'black'], 2);
+                    case 'M':
+                        return makeCenter('times', ['white', 'blue']);
+                    case 'N':
+                        return makeSquares(['blue', 'white'], 4);
+                    case 'O':
+                        return makeTriangles(['red', 'yellow']);
+                    case 'P':
+                        return makeCenter('square', ['white', 'blue']);
+                    case 'Q':
+                        return makeCenter('none', ['', 'yellow']);
+                    case 'R':
+                        return makeCenter('plus', ['yellow', 'red']);
+                    case 'S':
+                        return makeCenter('square', ['blue', 'white']);
+                    case 'T':
+                        return makeVert(['red', 'white', 'blue']);
+                    case 'U':
+                        return makeSquares(['red', 'white'], 2);
+                    case 'V':
+                        return makeCenter('times', ['red', 'white']);
+                    case 'W':
+                        return makeCenter('square', ['red', 'white', 'blue']);
+                    case 'X':
+                        return makeCenter('plus', ['blue', 'white']);
+                    case 'Y':
+                        return makeDiag(143.3, ['yellow', 'red'], 10);
+                    case 'Z':
+                        return makeTriangles(['yellow', 'blue', 'red', 'black']);
+                    case '0':
+                        return makeNumber('vert', ['yellow', 'red', 'yellow']);
+                    case '1':
+                        return makeNumber('circle', ['white', 'red']);
+                    case '2':
+                        return makeNumber('circle', ['blue', 'white']);
+                    case '3':
+                        return makeNumber('vert', ['red', 'white', 'blue']);
+                    case '4':
+                        return makeNumber('cross', ['red', 'white']);
+                    case '5':
+                        return makeNumber('vert', ['yellow', 'blue']);
+                    case '6':
+                        return makeNumber('horz', ['black', 'white']);
+                    case '7':
+                        return makeNumber('horz', ['yellow', 'red']);
+                    case '8':
+                        return makeNumber('cross', ['white', 'red']);
+                    case '9':
+                        return makeNumber('corners', ['white', 'black', 'red', 'yellow']);
+
+                    // TODO: Numerical pennants (international)
+                    // OPTIONAL: Numerical signal flags https://christinedemerchant.com/flag-alphabet.html
+                }
+
+                return null;
+            }
+
+            function setAttributesNS(obj, attrs) {
+                for (var a in attrs) {
+                    obj.setAttributeNS(null, a, attrs[a]);
+                }
+            }
+
+            function makeBorder(shape) {
+                var g = document.createElementNS(xmlns, 'g');
+                g.classList.add('border');
+                
+                if (shape == undefined || shape === 'rect') {
+                    var rect = document.createElementNS(xmlns, 'rect');
+                    setAttributesNS(rect, {
+                        'x': 0,
+                        'y': 0,
+                        'height': glyphHeight,
+                        'width': glyphWidth,
+                    });
+                    g.appendChild(rect);
+                }
+                else if (shape === 'cutout') {
+                    var points = polyPoints([
+                        [0, 0],
+                        [glyphWidth, 0],
+                        [glyphHeight * .9, glyphHeight / 2],
+                        [glyphWidth, glyphHeight],
+                        [0, glyphHeight]
+                    ]);
+                    var poly = document.createElementNS(xmlns, 'polygon');
+                    poly.setAttributeNS(null, "points", points);
+                    g.appendChild(poly);
+                }
+                else if (shape === 'number') {
+                    var outline = [
+                        [0,0],
+                        [glyphWidth, glyphHeight * 0.3],
+                        [glyphWidth, glyphHeight * 0.7],
+                        [0,glyphHeight],
+                        [0,0]
+                    ];
+                    var penant = document.createElementNS(xmlns, 'polygon');
+                    penant.setAttributeNS(null, "points", polyPoints(outline));
+                    g.appendChild(penant);
+                }
+                return g;
+            }
+
+            function makeHorz(colors)
+            {
+                var g = document.createElementNS(xmlns, 'g');
+
+                var y = 0;
+                var dy = glyphHeight / colors.length;
+                for (var i = 0; i < colors.length; i++) {
+                    var h = dy;
+                    while (i + 1 < colors.length && colors[i + 1] == colors[i]) {
+                        h += dy;
+                        i++;
+                    }
+                    var rect = document.createElementNS(xmlns, 'rect');
+                    rect.setAttributeNS(null, "x", 0);
+                    rect.setAttributeNS(null, "y", y);
+                    rect.setAttributeNS(null, "height", h);
+                    rect.setAttributeNS(null, "width", glyphWidth);
+                    rect.setAttributeNS(null, "fill", colors[i]);
+                    rect.setAttributeNS(null, "stroke", 'none');
+                    y += h;
+                    g.appendChild(rect);
+                }
+                g.appendChild(makeBorder());
+
+                return g;
+            }
+
+            function makeVert(colors)
+            {
+                var g = document.createElementNS(xmlns, 'g');
+
+                var x = 0;
+                var dx = glyphWidth / colors.length;
+                for (var i = 0; i < colors.length; i++) {
+                    var rect = document.createElementNS(xmlns, 'rect');
+                    rect.setAttributeNS(null, "x", x);
+                    rect.setAttributeNS(null, "y", 0);
+                    rect.setAttributeNS(null, "height", glyphHeight);
+                    rect.setAttributeNS(null, "width", dx);
+                    rect.setAttributeNS(null, "fill", colors[i]);
+                    rect.setAttributeNS(null, "stroke", 'none');
+                    x += dx;
+                    g.appendChild(rect);
+                }
+                g.appendChild(makeBorder());
+
+                return g;
+            }
+
+            function makeCutout(colors)
+            {
+                var g = document.createElementNS(xmlns, 'g');
+
+                var x = 0;
+                var dx = glyphWidth / (colors.length + 1);
+                for (var i = 0; i < colors.length; i++) {
+                    if (i < colors.length - 1) {
+                        var rect = document.createElementNS(xmlns, 'rect');
+                        rect.setAttributeNS(null, "x", x);
+                        rect.setAttributeNS(null, "y", 0);
+                        rect.setAttributeNS(null, "height", glyphHeight);
+                        rect.setAttributeNS(null, "width", dx);
+                        rect.setAttributeNS(null, "fill", colors[i]);
+                        rect.setAttributeNS(null, "stroke", 'none');
+                        x += dx;
+                        g.appendChild(rect);
+                    }
+                    else {
+                        var poly = document.createElementNS(xmlns, 'polygon');
+                        var points = polyPoints([
+                            [x, 0],
+                            [glyphWidth, 0],
+                            [glyphHeight * .9, glyphHeight / 2],
+                            [glyphWidth, glyphHeight],
+                            [x, glyphHeight]
+                        ]);
+                        poly.setAttributeNS(null, "points", points);
+                        poly.setAttributeNS(null, "fill", colors[i]);
+                        poly.setAttributeNS(null, "stroke", 'none');
+                        g.appendChild(poly);
+                    }
+                }
+                g.appendChild(makeBorder('cutout'));
+
+                return g;
+            }
+
+            function makeSquares(colors, side)
+            {
+                var g = document.createElementNS(xmlns, 'g');
+
+                var i = 0;
+                var dx = glyphWidth / side;
+                var dy = glyphHeight / side;
+                for (var y = 0; y < side; y++) {
+                    for (var x = 0; x < side; x++) {
+                        var rect = document.createElementNS(xmlns, 'rect');
+                        rect.setAttributeNS(null, "x", x * dx);
+                        rect.setAttributeNS(null, "y", y * dy);
+                        rect.setAttributeNS(null, "height", dy);
+                        rect.setAttributeNS(null, "width", dx);
+                        rect.setAttributeNS(null, "fill", colors[i % colors.length]);
+                        rect.setAttributeNS(null, "stroke", 'none');
+                        g.appendChild(rect);
+                        i++;
+                    }
+                    i++;
+                }
+                g.appendChild(makeBorder());
+
+                return g;
+            }
+
+            function makeDiag(slope, colors, count)
+            {
+                var g = document.createElementNS(xmlns, 'g');
+
+                count |= colors.length;
+
+                var tan = Math.tan(Math.PI * slope / 180);
+                var xCos = glyphHeight / tan;
+                var x = xCos < 0 ? 0 : -xCos;
+                var xEnd = xCos < 0 ? (glyphWidth - xCos) : glyphWidth;
+                var dx = (xEnd - x) / count;
+
+                for (var i = 0; i < count; i++) {
+                    var polygon = document.createElementNS(xmlns, 'polygon');
+                    var points = polyPoints([
+                        [x, 0],
+                        [x+dx+1, 0],
+                        [x+xCos+dx+1, glyphHeight],
+                        [x+xCos, glyphHeight]
+                    ]);
+                    polygon.setAttributeNS(null, "points", points);
+                    polygon.setAttributeNS(null, "fill", colors[i % colors.length]);
+                    polygon.setAttributeNS(null, "stroke", 'none');
+                    x += dx;
+                    g.appendChild(polygon);
+                }
+                g.appendChild(makeBorder());
+
+                return g;
+            }
+
+            function makeCenter(shape, colors)
+            {
+                var g = document.createElementNS(xmlns, 'g');
+
+                var rect = document.createElementNS(xmlns, 'rect');
+                rect.setAttributeNS(null, "x", 0);
+                rect.setAttributeNS(null, "y", 0);
+                rect.setAttributeNS(null, "height", glyphHeight);
+                rect.setAttributeNS(null, "width", glyphWidth);
+                rect.setAttributeNS(null, "fill", colors[colors.length - 1]);  // background color
+                rect.setAttributeNS(null, "stroke", 'none');
+                g.appendChild(rect);
+
+                if (shape == 'circle') {
+                    var circle = document.createElementNS(xmlns, 'circle');
+                    circle.setAttributeNS(null, "cx", glyphWidth / 2);
+                    circle.setAttributeNS(null, "cy", glyphHeight / 2);
+                    circle.setAttributeNS(null, "r", glyphHeight / 3);
+                    circle.setAttributeNS(null, "fill", colors[0]);  // foreground color
+                    circle.setAttributeNS(null, "stroke", 'none');
+                    g.appendChild(circle);
+                }
+                else if (shape == 'square') {
+                    for (var i = colors.length - 2; i >= 0; i--) {
+                        var frac = (i + 1) / colors.length;
+                        rect = document.createElementNS(xmlns, 'rect');
+                        rect.setAttributeNS(null, "x", glyphWidth * (.5 - frac / 2));
+                        rect.setAttributeNS(null, "y", glyphHeight * (.5 - frac / 2));
+                        rect.setAttributeNS(null, "height", glyphHeight * frac);
+                        rect.setAttributeNS(null, "width", glyphWidth * frac);
+                        rect.setAttributeNS(null, "fill", colors[i]);  // background color
+                        rect.setAttributeNS(null, "stroke", 'none');
+                        g.appendChild(rect);
+                    }
+                }
+                else {
+                    var poly = document.createElementNS(xmlns, 'polygon');
+                    poly.setAttributeNS(null, "fill", colors[0]);  // foreground color
+                    poly.setAttributeNS(null, "stroke", 'none');
+                    var points = '';
+
+                    switch (shape) {
+                        case 'diamond':
+                            points = polyPoints([
+                                [glyphWidth / 2, 0],
+                                [glyphWidth, glyphHeight / 2],
+                                [glyphWidth / 2, glyphHeight],
+                                [0, glyphHeight / 2],
+                            ]);
+                            break;
+                        case 'plus':
+                            points = polyPoints([
+                                [0, glyphHeight * .4],
+                                [glyphWidth * .4, glyphHeight * .4],
+                                [glyphWidth * .4, 0],
+
+                                [glyphWidth * .6, 0],
+                                [glyphWidth * .6, glyphHeight * .4],
+                                [glyphWidth, glyphHeight * .4],
+
+                                [glyphWidth, glyphHeight * .6],
+                                [glyphWidth * .6, glyphHeight * .6],
+                                [glyphWidth * .6, glyphHeight],
+
+                                [glyphWidth * .4, glyphHeight],
+                                [glyphWidth * .4, glyphHeight * .6],
+                                [0, glyphHeight * .6],
+                            ]);
+                            break;
+                        case 'times':
+                            points = polyPoints([
+                                [0, glyphHeight * -.1],
+                                [glyphWidth * .5, glyphHeight * .4],
+                                [glyphWidth, glyphHeight * -.1],
+
+                                [glyphWidth * 1.1, 0],
+                                [glyphWidth * .6, glyphHeight * .5],
+                                [glyphWidth * 1.1, glyphHeight],
+
+                                [glyphWidth, glyphHeight * 1.1],
+                                [glyphWidth * .5, glyphHeight * .6],
+                                [0, glyphHeight * 1.1],
+
+                                [glyphWidth * -.1, glyphHeight],
+                                [glyphWidth * .4, glyphHeight * .5],
+                                [glyphWidth * -.1, 0],
+                            ]);
+                            break;
+                    }
+
+                    poly.setAttributeNS(null, "points", points);
+                    g.appendChild(poly);
+                }
+                g.appendChild(makeBorder());
+                return g;
+            }
+
+            function makeTriangles(colors)
+            {
+                var g = document.createElementNS(xmlns, 'g');
+
+                if (colors.length == 2) {
+                    var points = [
+                            [0,0],
+                            [glyphWidth, glyphHeight],
+                            [glyphWidth, 0]
+                        ];
+                    var poly = document.createElementNS(xmlns, 'polygon');
+                    poly.setAttributeNS(null, "points", polyPoints(points));
+                    poly.setAttributeNS(null, "fill", colors[0]);
+                    poly.setAttributeNS(null, "stroke", 'none');
+                    g.appendChild(poly);
+
+                    points[2] = [0, glyphHeight]
+                    poly = document.createElementNS(xmlns, 'polygon');
+                    poly.setAttributeNS(null, "points", polyPoints(points));
+                    poly.setAttributeNS(null, "fill", colors[1]);
+                    poly.setAttributeNS(null, "stroke", 'none');
+                    g.appendChild(poly);
+
+                }
+                else {
+                    var points = [
+                            [0,0],
+                            [glyphWidth / 2, glyphHeight / 2],
+                            [0,0]
+                        ];
+                    for (var i = 0; i < 4; i++) {
+                        points[0] = points[2];  // carry forward
+                        switch (i) {
+                            case 0:  // top
+                                points[2] = [glyphWidth, 0];
+                                break;
+                            case 1:  // right
+                                points[2] = [glyphWidth, glyphHeight];
+                                break;
+                            case 2:  // bottom
+                                points[2] = [0, glyphHeight];
+                                break;
+                            case 3:  // left
+                                points[2] = [0, 0];
+                                break;
+                        }
+
+                        var poly = document.createElementNS(xmlns, 'polygon');
+                        poly.setAttributeNS(null, "points", polyPoints(points));
+                        poly.setAttributeNS(null, "fill", colors[i]);
+                        poly.setAttributeNS(null, "stroke", 'none');
+                        g.appendChild(poly);
+                    }
+                }
+                g.appendChild(makeBorder());
+
+                return g;
+            }
+
+            function makeNumber(style, colors) {
+                var g = document.createElementNS(xmlns, 'g');
+
+                var outline = [
+                        [0,0],
+                        [glyphWidth, glyphHeight * 0.3],
+                        [glyphWidth, glyphHeight * 0.7],
+                        [0,glyphHeight],
+                        [0,0]
+                    ];
+                var penant = document.createElementNS(xmlns, 'polygon');
+                penant.setAttributeNS(null, "points", polyPoints(outline));
+                penant.setAttributeNS(null, "fill", colors[0]);  // field color
+                penant.setAttributeNS(null, "stroke", 'none');
+                g.appendChild(penant);
+
+                if (style == 'circle') {
+                    var circle = document.createElementNS(xmlns, 'circle');
+                    circle.setAttributeNS(null, "cx", glyphWidth / 3);
+                    circle.setAttributeNS(null, "cy", glyphHeight / 2);
+                    circle.setAttributeNS(null, "r", glyphHeight / 4);
+                    circle.setAttributeNS(null, "fill", colors[1]);  // inset color
+                    circle.setAttributeNS(null, "stroke", 'none');
+                    g.appendChild(circle);
+                }
+                else if (style == 'cross') {
+                    var poly = document.createElementNS(xmlns, 'polygon');
+                    poly.setAttributeNS(null, "fill", colors[1]);  // foreground color
+                    poly.setAttributeNS(null, "stroke", 'none');
+                    var points = polyPoints([
+                            [0, glyphHeight * .45],
+                            [glyphWidth * .3, glyphHeight * .45],
+                            [glyphWidth * .3, glyphHeight * .09],
+
+                            [glyphWidth * .4, glyphHeight * .12],
+                            [glyphWidth * .4, glyphHeight * .45],
+                            [glyphWidth, glyphHeight * .45],
+
+                            [glyphWidth, glyphHeight * .55],
+                            [glyphWidth * .4, glyphHeight * .55],
+                            [glyphWidth * .4, glyphHeight * .88],
+
+                            [glyphWidth * .3, glyphHeight * .91],
+                            [glyphWidth * .3, glyphHeight * .55],
+                            [0, glyphHeight * .55]
+                        ]);
+                    poly.setAttributeNS(null, "points", points);
+                    g.appendChild(poly);
+                }
+                else if (style == 'vert') {
+                    for (var i = 1; i < colors.length; i++) {
+                        var left = glyphWidth * i / colors.length;
+                        var right = glyphWidth * (i + 1) / colors.length;
+                        var top1 = left * (glyphHeight * 0.3) / glyphWidth;
+                        var top2 = right * (glyphHeight * 0.3) / glyphWidth;
+                        var bottom1 = glyphHeight - top1;
+                        var bottom2 = glyphHeight - top2;
+                        var points = polyPoints([
+                            [left, top1], [right, top2], [right, bottom2], [left, bottom1], [left, top1]
+                        ]);
+                        var poly = document.createElementNS(xmlns, 'polygon');
+                        poly.setAttributeNS(null, "fill", colors[i]);
+                        poly.setAttributeNS(null, "stroke", 'none');
+                        poly.setAttributeNS(null, "points", points);
+                        g.appendChild(poly);
+                    }
+                }
+                else if (style == 'horz') {
+                    // horz is always 2 stripes
+                    // the first is already the background
+                    var poly = document.createElementNS(xmlns, 'polygon');
+                    poly.setAttributeNS(null, "fill", colors[1]);
+                    poly.setAttributeNS(null, "stroke", 'none');
+                    var points = polyPoints([
+                            [0, glyphHeight / 2],
+                            [glyphWidth, glyphHeight / 2],
+                            [glyphWidth, glyphHeight * 0.7],
+                            [0, glyphHeight],
+                            [0, glyphHeight / 2],
+                        ]);
+                    poly.setAttributeNS(null, "points", points);
+                    g.appendChild(poly);
+                }
+                else if (style == 'corners') {
+                    // Colors are listedt in reading order
+                    for (var i = 1; i < 4; i++) {
+                        var left = glyphWidth * (i % 2) / 2;
+                        var right = left + glyphWidth / 2;
+                        var points = '';
+                        if (i < 2) {
+                            var tl = glyphHeight * (i % 2) * 0.15;
+                            var tr = tl + glyphHeight * 0.15;
+                            points = polyPoints([
+                                [left, tl],
+                                [right, tr],
+                                [right, glyphHeight / 2],
+                                [left, glyphHeight / 2],
+                                [left, tl],
+                            ]);
+                        }
+                        else {
+                            var bl = glyphHeight - (glyphHeight * (i % 2) * 0.15);
+                            var br = bl - glyphHeight * 0.15;
+                            points = polyPoints([
+                                [left, glyphHeight / 2],
+                                [right, glyphHeight / 2],
+                                [right, br],
+                                [left, bl],
+                                [left, glyphHeight / 2],
+                            ]);
+                        }                        
+                        var poly = document.createElementNS(xmlns, 'polygon');
+                        poly.setAttributeNS(null, "fill", colors[i]);
+                        poly.setAttributeNS(null, "stroke", 'none');
+                        poly.setAttributeNS(null, "points", points);
+                        g.appendChild(poly);
+                    }
+                }
+                g.appendChild(makeBorder('number'));
+                return g;
+            }
+
+            // Build the polygon points attribute from an array of points, each of which is an array of 2 numbers
+            function polyPoints(path) {
+                var points = '';
+                for (var i = 0; i < path.length; i++) {
+                    points += path[i][0] + ',' + path[i][1] + ' ';
+                }
+                return points;
+            }
+
+            function createCode(alpha) {
+                var traits = document.getElementById('flagTraits');
+
+                if (showFlagMatch(alpha, 10.5)) {
+                    traits.style.display = 'none';
+                }
+                else {
+                    traits.style.display = 'block';
+                }
+            }
+
+            function clickCandidate() {
+                var elmt = event.srcElement;
+                while (!elmt.classList.contains('flag')) {
+                    elmt = elmt.parentNode;
+                }
+                var alpha = elmt.getAttribute('data-alpha');
+                showFlagMatch(alpha, 5, false);
+            }
+
+            function showFlagMatch(alpha, scale, append) {
+                var g = makeNauticalG(alpha);
+                var candidates = document.getElementById('flagCandidates');
+                append |= false;
+                if (!append) {
+                    while (candidates.lastChild != null) {
+                        candidates.removeChild(candidates.lastChild);
+                    }
+                }
+                if (g != null) {
+                    g.setAttributeNS(null, "transform", 'scale(' + scale + ')');
+                    var svg = document.createElementNS(xmlns, 'svg');
+                    svg.classList.add('flag');
+                    svg.setAttributeNS(null, 'width', Math.ceil(glyphWidth * scale));
+                    svg.setAttributeNS(null, 'height', Math.ceil(glyphHeight * scale));
+                    svg.setAttributeNS(null, 'style', 'margin: 0.1in');
+                    svg.setAttribute('data-alpha', alpha);
+                    svg.appendChild(g);
+                    if (!isFromAlpha()) {
+                        svg.addEventListener('click', clickCandidate);
+                    }
+                    candidates.append(svg);
+                    curFlag = append ? '' : alpha;
+                    setAlpha(curFlag);
+                    return true;
+                }
+                else {
+                    curFlag = '';
+                    setAlpha('');
+                    if (alpha == null) {
+                        // special case to say "NONE"
+                        var span = document.createElement('span');
+                        span.classList.add('none');
+                        span.appendChild(document.createTextNode('NO MATCHES'));
+                        candidates.append(span);
+                    }
+                    return false;
+                }
+            }
+
+            // No hotkeys
+            function codeKeyDown(evt) {
+            }
+
+            var curFlag = '';
+            function getCurrentCode() {
+                return curFlag;
+            }
+
+            var fcFilter = 0;
+            var ffFilter = 0;
+
+            const BTN = {
+                Color: 0,
+                Shape: 1,
+                Detail: 2,
+            }
+
+            const buttonMap = [
+                ['fcWhite', FC.White, BTN.Color],
+                ['fcRed', FC.Red, BTN.Color],
+                ['fcYellow', FC.Yellow, BTN.Color],
+                ['fcBlue', FC.Blue, BTN.Color],
+                ['fcBlack', FC.Black, BTN.Color],
+                ['ffHorz', FF.Horz, BTN.Shape, 'shapeHorzMore'],
+                ['ffVert', FF.Vert, BTN.Shape, 'shapeVertMore'],
+                ['ffSquare', FF.Square, BTN.Shape, 'shapeSquareMore'],
+                ['ffMiddle', FF.Middle, BTN.Shape, 'shapeMiddleMore'],
+                ['ffDiag', FF.Diag, BTN.Shape, 'shapeDiagMore'],
+                ['ffCross', FF.Cross, BTN.Shape, 'shapeCrossMore'],
+                ['ffSolid', FF.Solid, BTN.Shape, 'shapeSolidMore'],
+                ['ffCutout', FF.Cutout, BTN.Shape, 'shapeCutoutMore'],
+                ['ffPenant', FF.Penant, BTN.Shape, 'shapePenantMore'],
+                ['ffH2', FF.H2, BTN.Detail],
+                ['ffH3', FF.H3, BTN.Detail],
+                ['ffH5', FF.H5, BTN.Detail],
+                ['ffV2', FF.V2, BTN.Detail],
+                ['ffV3', FF.V3, BTN.Detail],
+                ['ffV6', FF.V6, BTN.Detail],
+                ['ffVK', FF.CutoutA, BTN.Detail],
+                ['ffSB', FF.SBig, BTN.Detail],
+                ['ffSS', FF.SSmall, BTN.Detail],
+                ['ffD2', FF.DTri2, BTN.Detail],
+                ['ffD4', FF.DTri4, BTN.Detail],
+                ['ffD10', FF.DStripe, BTN.Detail],
+                ['ffCP', FF.CPlus, BTN.Detail],
+                ['ffCT', FF.CTimes, BTN.Detail],
+                ['ffMD', FF.MDiamond, BTN.Detail],
+                ['ffMC', FF.MCircle, BTN.Detail],
+                ['ffMS2', FF.MSquare2, BTN.Detail],
+                ['ffMS3', FF.MSquare3, BTN.Detail],
+                ['ffKA', FF.CutoutA, BTN.Detail],
+                ['ffKB', FF.CutoutB, BTN.Detail],
+                ['ffSQ', FF.TrueSolid, BTN.Detail],
+                ['ffSK', FF.CutoutB, BTN.Detail],
+                ['ffPC', FF.PenantCircle, BTN.Detail],
+                ['ffPP', FF.PenantCross, BTN.Detail],
+                ['ffPH', FF.PenantH2, BTN.Detail],
+                ['ffPV', FF.PenantV, BTN.Detail],
+                ['ffPS', FF.PenantCorners, BTN.Detail],
+            ];
+
+            function getButton(btnType, value) {
+                for (var i = 0; i < buttonMap.length; i++) {
+                    if (buttonMap[i][2] == btnType && buttonMap[i][1] == value) {
+                        return document.getElementById(buttonMap[i][0]);
+                    }
+                }
+                return null;
+            }
+
+            function setFlagColor(fc, on) {
+                if (on == undefined) {
+                    fcFilter ^= fc;  // toggle
+                }
+                else if (on) {
+                    fcFilter |= fc;
+                }
+                else {
+                    fcFilter &= ~fc;
+                }
+
+                var btn = getButton(BTN.Color, fc);
+                var circle = btn.childNodes[1];
+                if ((fcFilter & fc) == fc) {
+                    circle.setAttributeNS(null, 'fill', circle.getAttributeNS(null, 'stroke'));
+                } 
+                else {
+                    circle.setAttributeNS(null, 'fill', 'transparent');
+                }
+
+                applyFilter();
+            }
+
+            function setFlagFeature(ff) {
+                ffFilter = ff;
+                // Update the UI
+                for (var i = 0; i < buttonMap.length; i++) {
+                    if (buttonMap[i][2] != BTN.Color) {
+                        var btn = document.getElementById(buttonMap[i][0]);
+                        var box = btn.childNodes[1];
+                        var match = (ffFilter & buttonMap[i][1]) == buttonMap[i][1];
+                        box.setAttributeNS(null, 'fill', match ? 'white' : 'transparent');
+                        if (buttonMap[i][2] == BTN.Shape) {
+                            var more = document.getElementById(buttonMap[i][3]);
+                            if (!match) {
+                                more.classList.remove('show');
+                            }
+                            else if (ff == buttonMap[i][1]) {
+                                more.classList.add('show');  // Only show when we're clicked on
+                            }
+                        }
+                    }
+                }
+
+                applyFilter();
+            }
+
+            function applyFilter() {
+                var matches = matchingFilter();
+                if (matches.length == 0) {
+                    showFlagMatch(null, 0);
+                }
+                else if (matches.length == 1) {
+                    showFlagMatch(matches[0]['alpha'], 5);
+                }
+                else {
+                    var scale = 3;
+                    if (matches.length > 3) {
+                        scale = 1.7;
+                    }
+                    if (matches.length > 10) {
+                        scale = 1.2;
+                    }
+                    if (matches.length > 18) {
+                        scale = .75;
+                    }
+                    if (matches.length > 26) {
+                        scale = .7;
+                    }
+                    for (var i = 0; i < matches.length; i++) {
+                        showFlagMatch(matches[i]['alpha'], scale, i > 0);
+                    }
+                }
+            }
+
+            function onReverseDecoder(toAlpha) {
+                var traits = document.getElementById('flagTraits');
+                traits.style.display = toAlpha ? 'block' : 'none';
+                showFlagMatch('', 0);
+                if (toAlpha) {
+                    applyFilter();
+                }
+            }
+        </script>
+    </head>
+    <body onkeydown="keyDown()" onload="readUrl()">
+        <table id="decoder-menu">
+            <tr>
+                <td title="Decoder Home"><a href="javascript:goto('index')">🏠</a></td>
+                <td><a href="javascript:goto('Braille')">Braille</a></td>
+                <td><a href="javascript:goto('Morse')">Morse</a></td>
+                <td><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+                <td><a href="javascript:goto('PigPen')">Pig Pen</a></td>
+                <td><a href="javascript:goto('FiveBit')">Five Bit</a></td>
+                <td><a href="javascript:goto('Trinary')">Trinary</a></td>
+                <td class="current">Nautical</td>
+                <td><a href="javascript:goto('RotCipher')">Rot</a></td>
+                <td><a href="javascript:goto('Ascii')">Ascii</a></td>
+                <td class="instruction-link" title="Instructions"><a href="javascript:toggleInstructions()">&#x2753;</a></td>
+            </tr>
+        </table>
+        <table id="InputTable">
+            <tr>
+                <td id="AlphaToCode" rowspan="2">
+                    <input type='text' id="fromAlpha" maxlength="1">
+                    <button id="fastButton" title="<Ctrl+Space>" onclick="toggleFast()">Auto</button>
+                </td>
+                <td id="FlagUI" rowspan="1">
+                    <div id="flagTraits" style="position: relative; height: 280px;">
+                        <div id="shapePalette" style="position: absolute; left: 0px; width: 280px; ">
+                            <div id="shapeFirstRow">
+                                <svg width="280" height="90">
+                                    <g id="ffHorz" onmousedown="setFlagFeature(FF.Horz)" class="area">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path d="M 5,25 L 65,25 M 5,45 L 65,45" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">Horizontal</text>
+                                    </g>
+                                    <g id="ffDiag" onmousedown="setFlagFeature(FF.Diag)" class="area" transform="translate(70,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path d="M 5,5 L 35,35 M 5,65 L 65,5 M 25,65 L 65,25" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">Diagonal</text>
+                                    </g>
+                                    <g id="ffCross" onmousedown="setFlagFeature(FF.Cross)" class="area" transform="translate(140,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path d="M 5,30 L 30,30 L 30,5 M 40,5 L 40,30 L 65,30" stroke="black" stroke-width="1" fill="none"></path>
+                                        <path d="M 5,40 L 30,40 L 30,65 M 40,65 L 40,40 L 65,40" stroke="black" stroke-width="1" fill="none"></path>
+                                        <text class="traitText" x="35" y="80">Cross or X</text>
+                                    </g>
+                                    <g id="ffSolid" onmousedown="setFlagFeature(FF.Solid)" class="area" transform="translate(210,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <text class="traitText" x="35" y="80">Solid</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeHorzMore" class="shapePalette moreShapes">
+                                <svg width="210" height="90">
+                                    <g id="ffH2" onmousedown="setFlagFeature(FF.H2)" class="area" transform="translate(0,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="5" y="35" width="60" height="30" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">2 bars</text>
+                                    </g>
+                                    <g id="ffH3" onmousedown="setFlagFeature(FF.H3)" class="area" transform="translate(70,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="5" y="25" width="60" height="20" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">3 bars</text>
+                                    </g>
+                                    <g id="ffH5" onmousedown="setFlagFeature(FF.H5)" class="area" transform="translate(140,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="5" y="17" width="60" height="12" stroke="black" stroke-width="1"></rect>
+                                        <rect class="lightshade" x="5" y="41" width="60" height="12" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">5 bars</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeDiagMore" class="shapePalette moreShapes">
+                                <svg width="210" height="90">
+                                    <g id="ffD2" onmousedown="setFlagFeature(FF.DTri2)" class="area" transform="translate(0,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path class="lightshade" d="M 5,5 L 65,65 L 65,5 Z" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">2 triangles</text>
+                                    </g>
+                                    <g id="ffD4" onmousedown="setFlagFeature(FF.DTri4)" class="area" transform="translate(70,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path class="lightshade" d="M 5,5 L 65,65 L 65,5 L 5,65 Z" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">4 triangles</text>
+                                    </g>
+                                    <g id="ffD10" onmousedown="setFlagFeature(FF.DStripe)" class="area" transform="translate(140,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path class="lightshade" d="M 5,5 5,17 17,5 29,5 5,29 5,41 41,5 53,5 5,53 5,65 65,5 65,17 17,65 29,65 65,29 65,41 41,65 53,65 65,53 65,5" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">Stripes</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeCrossMore" class="shapePalette moreShapes fourthShape">
+                                <svg width="140" height="90">
+                                    <g id="ffCP" onmousedown="setFlagFeature(FF.CPlus)" class="area" transform="translate(0,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path class="lightshade" d="M 5,30 30,30 30,5 40,5 40,30 65,30 65,40 40,40 40,65 30,65 30,40 5,40 Z" stroke="black" stroke-width="1" fill="none"></path>
+                                        <text class="traitText" x="35" y="80">Cross</text>
+                                    </g>
+                                    <g id="ffCT" onmousedown="setFlagFeature(FF.CTimes)" class="area" transform="translate(70,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path class="lightshade" d="M 10,5 35,30 60,5 65,5 65,10 40,35 65,60 65,65 60,65 35,40 10,65 5,65 5,60 30,35 5,10 5,5 Z" stroke="black" stroke-width="1" fill="none"></path>
+                                        <text class="traitText" x="35" y="80">X</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeSolidMore" class="shapePalette moreShapes">
+                                <svg width="140" height="90">
+                                    <g id="ffSQ" onmousedown="setFlagFeature(FF.TrueSolid)" class="area" transform="translate(0,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <text class="traitText" x="35" y="80">Rectangle</text>
+                                    </g>
+                                    <g id="ffSK" onmousedown="setFlagFeature(FF.CutoutB)" class="area" transform="translate(70,0)">
+                                        <path class="hoverable" d="M 5,5 L 65,5 L 50,35 L 65,65 L 5,65 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <text class="traitText" x="35" y="80">Cutout</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeSecondRow" class="shapePalette">
+                                <svg width="280" height="90">
+                                    <g id="ffVert" onmousedown="setFlagFeature(FF.Vert)" class="area" transform="translate(0,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path d="M 25,5 L 25,65 M 45,5 L 45,65" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">Vertical</text>
+                                    </g>
+                                    <g id="ffMiddle" onmousedown="setFlagFeature(FF.Middle)" class="area" transform="translate(70,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect x="25" y="25" width="20" height="20" stroke="black" fill="none"></rect>
+                                        <text class="traitText" x="35" y="80">Central</text>
+                                    </g>
+                                    <g id="ffSquare" onmousedown="setFlagFeature(FF.Square)" class="area" transform="translate(140,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path d="M 5,35 L 65,35 M 35,5 L 35,65" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">Squares</text>
+                                    </g>
+                                    <g id="ffCutout" onmousedown="setFlagFeature(FF.Cutout)" class="area" transform="translate(280,0)">
+                                        <path class="hoverable" d="M 5,5 L 65,5 L 50,35 L 65,65 L 5,65 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <path d="M 30,5 L 30,65" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">Cutout</text>
+                                    </g>
+                                    <g id="ffPenant" onmousedown="setFlagFeature(FF.Penant)" class="area" transform="translate(210,0)">
+                                        <path class="hoverable" d="M 5,5 L 65,23 L 65,47 L 5,65 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <text class="traitText" x="35" y="80">Shaped</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeVertMore" class="shapePalette moreShapes">
+                                <svg width="280" height="90">
+                                    <g id="ffV2" onmousedown="setFlagFeature(FF.V2)" class="area" transform="translate(0,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="35" y="5" width="30" height="60" stroke="black" fill="transparent"></rect>
+                                        <text class="traitText" x="35" y="80">2 bars</text>
+                                    </g>
+                                    <g id="ffV3" onmousedown="setFlagFeature(FF.V3)" class="area" transform="translate(70,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="25" y="5" width="20" height="60" stroke="black" fill="transparent"></rect>
+                                        <text class="traitText" x="35" y="80">3 bars</text>
+                                    </g>
+                                    <g id="ffV6" onmousedown="setFlagFeature(FF.V6)" class="area" transform="translate(140,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="15" y="5" width="10" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="35" y="5" width="10" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="55" y="5" width="10" height="60" stroke="black" fill="transparent"></rect>
+                                        <text class="traitText" x="35" y="80">6 bars</text>
+                                    </g>
+                                    <g id="ffVK" onmousedown="setFlagFeature(FF.CutoutA)" class="area" transform="translate(210,0)">
+                                        <path class="hoverable" d="M 5,5 L 65,5 L 50,35 L 65,65 L 5,65 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <rect class="lightshade" x="5" y="5" width="30" height="60" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">Cutout</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeSquareMore" class="shapePalette moreShapes">
+                                <svg width="280" height="90">
+                                    <g id="ffSB" onmousedown="setFlagFeature(FF.SBig)" class="area" transform="translate(0,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="5" y="5" width="30" height="30" stroke="black"></rect>
+                                        <rect class="lightshade" x="35" y="35" width="30" height="30" stroke="black"></rect>
+                                        <text class="traitText" x="35" y="80">4 squares</text>
+                                    </g>
+                                    <g id="ffSS" onmousedown="setFlagFeature(FF.SSmall)" class="area" transform="translate(70,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path class="lightshade" d="M 5,5 5,20 65,20 65,35 5,35 5,50 L 65,50 65,65 50,65 50,5 35,5 35,65 20,65 20,5 Z" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">16 squares</text>
+                                    </g>
+                                    <g id="ffS2" onmousedown="setFlagFeature(FF.MSquare2)" class="area" transform="translate(140,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="20" y="20" width="30" height="30" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">2 squares</text>
+                                    </g>
+                                    <g id="ffS3" onmousedown="setFlagFeature(FF.MSquare3)" class="area" transform="translate(210,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="15" y="15" width="40" height="40" stroke="black" stroke-width="1"></rect>
+                                        <rect class="noshade" x="25" y="25" width="20" height="20" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">3 squares</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeMiddleMore" class="shapePalette moreShapes">
+                                <svg width="280" height="90">
+                                    <g id="ffMD" onmousedown="setFlagFeature(FF.MDiamond)" class="area" transform="translate(0,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <path class="lightshade" d="M 5,35 L 35,5 L 65,35 L 35,65 Z" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="35" y="80">Diamond</text>
+                                    </g>
+                                    <g id="ffMC" onmousedown="setFlagFeature(FF.MCircle)" class="area" transform="translate(70,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <circle class="lightshade" cx="35" cy="35" r="15" stroke="black" stroke-width="1"></circle>
+                                        <text class="traitText" x="35" y="80">Circle</text>
+                                    </g>
+                                    <g id="ffMS2" onmousedown="setFlagFeature(FF.MSquare2)" class="area" transform="translate(140,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="20" y="20" width="30" height="30" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">2 squares</text>
+                                    </g>
+                                    <g id="ffMS3" onmousedown="setFlagFeature(FF.MSquare3)" class="area" transform="translate(210,0)">
+                                        <rect class="hoverable" x="5" y="5" width="60" height="60" stroke="black" fill="transparent"></rect>
+                                        <rect class="lightshade" x="15" y="15" width="40" height="40" stroke="black" stroke-width="1"></rect>
+                                        <rect class="noshade" x="25" y="25" width="20" height="20" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">3 squares</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapeCutoutMore" class="shapePalette moreShapes">
+                                <svg width="140" height="90">
+                                    <g id="ffKB" onmousedown="setFlagFeature(FF.CutoutB)" class="area" transform="translate(0,0)">
+                                        <path class="hoverable" d="M 5,5 L 65,5 L 50,35 L 65,65 L 5,65 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <text class="traitText" x="35" y="80">Single</text>
+                                    </g>
+                                    <g id="ffKA" onmousedown="setFlagFeature(FF.CutoutA)" class="area" transform="translate(70,0)">
+                                        <path class="hoverable" d="M 5,5 L 65,5 L 50,35 L 65,65 L 5,65 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <rect class="lightshade" x="5" y="5" width="30" height="60" stroke="black" stroke-width="1"></rect>
+                                        <text class="traitText" x="35" y="80">Split</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div id="shapePenantMore" class="shapePalette moreShapes">
+                                <svg width="350" height="90">
+                                    <g id="ffPC" onmousedown="setFlagFeature(FF.PenantCircle)" class="area" transform="translate(5,5)">
+                                        <path class="hoverable" d="M 0,0 60,18 60,42 0,60 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <circle class="lightshade" cx="25" cy="30" r="10" stroke="black" stroke-width="1"></circle>
+                                        <text class="traitText" x="30" y="75">Circle</text>
+                                    </g>
+                                    <g id="ffPP" onmousedown="setFlagFeature(FF.PenantCross)" class="area" transform="translate(75,5)">
+                                        <path class="hoverable" d="M 0,0 60,18 60,42 0,60 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <xpath class="lightshade" d="M 0,24 L 18,24 L 18,5.4 L 30,9 L 30,24 L 60,24 L 60,36 L 30,36 L 30,51 L 18,54.6 L 18,36 L 0,36 Z" stroke="black" stroke-width="1"></xpath>
+                                        <path class="lightshade" d="M 0,27 L 24,27 L 24,7.2 L 30,9 L 30,27 L 60,27 L 60,33 L 30,33 L 30,51 L 24,52.8 L 24,33 L 0,33 Z" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="30" y="75">Cross</text>
+                                    </g>
+                                    <g id="ffPH" onmousedown="setFlagFeature(FF.PenantH2)" class="area" transform="translate(145,5)">
+                                        <path class="hoverable" d="M 0,0 60,18 60,42 0,60 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <path class="lightshade" d="M 0,30 L 60,30 L 60,42 L 0,60 Z" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="30" y="75">Horizontal</text>
+                                    </g>
+                                    <g id="ffPV" onmousedown="setFlagFeature(FF.PenantV)" class="area" transform="translate(215,5)">
+                                        <path class="hoverable" d="M 0,0 60,18 60,42 0,60 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <path class="lightshade" d="M 20,6 L 20,54 L 40,48 L 40,12 Z" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="30" y="75">Vertical</text>
+                                    </g>
+                                    <g id="ffPS" onmousedown="setFlagFeature(FF.PenantCorners)" class="area" transform="translate(285,5)">
+                                        <path class="hoverable" d="M 0,0 60,18 60,42 0,60 Z" stroke="black" stroke-width="1" fill="transparent"></path>
+                                        <path class="lightshade" d="M 0,0 L 0,30 L 30,30 L 30,9 Z" stroke="black" stroke-width="1"></path>
+                                        <path class="lightshade" d="M 60,42 L 60,30 L 30,30 L 30,51 Z" stroke="black" stroke-width="1"></path>
+                                        <text class="traitText" x="30" y="75">Corners</text>
+                                    </g>
+                                </svg>
+                            </div>
+                        </div>
+                        <div id="colorPalette" style="position: absolute; right: 0px;">
+                            <svg width="120" height="200">
+                                <g id="fcWhite" onmousedown="setFlagColor(FC.White)" class="area" transform="translate(0,0)">
+                                    <circle class="hoverable" cx="25" cy="25" r="20" stroke="white" stroke-width="2" fill="transparent"></circle>
+                                    <text class="traitText" x="25" y="60">White</text>
+                                </g>
+                                <g id="fcRed" onmousedown="setFlagColor(FC.Red)" class="area" transform="translate(70,0)">
+                                    <circle class="hoverable" cx="25" cy="25" r="20" stroke="red" stroke-width="2" fill="transparent"></circle>
+                                    <text class="traitText" x="25" y="60">Red</text>
+                                </g>
+                                <g id="fcYellow" onmousedown="setFlagColor(FC.Yellow)" class="area" transform="translate(35,55)">
+                                    <circle class="hoverable" cx="25" cy="25" r="20" stroke="yellow" stroke-width="2" fill="transparent"></circle>
+                                    <text class="traitText" x="25" y="60">Yellow</text>
+                                </g>
+                                <g id="fcBlue" onmousedown="setFlagColor(FC.Blue)" class="area" transform="translate(0,110)">
+                                    <circle class="hoverable" cx="25" cy="25" r="20" stroke="blue" stroke-width="2" fill="transparent"></circle>
+                                    <text class="traitText" x="25" y="60">Blue</text>
+                                </g>
+                                <g id="fcBlack" onmousedown="setFlagColor(FC.Black)" class="area" transform="translate(70,110)">
+                                    <circle class="hoverable" cx="25" cy="25" r="20" stroke="black" stroke-width="2" fill="transparent"></circle>
+                                    <text class="traitText" x="25" y="60">Black</text>
+                                </g>
+                            </svg>                                    
+                        </div>
+                    </div>
+                    <div id="flagCandidates" style="text-align: center;">
+                    </div>
+                </td>
+                <td id="CodeToAlpha" style="width: 1em; border: dotted 1px lightgray;" rowspan="2">
+                    <span id="fromCode">&nbsp;</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="position: relative;">
+                    <div id="directionIndicator">
+                        <button id="leftDir" title="<Caps>" class="dirButton" onclick="reverseDecoder(false)">Text to Flags</button>
+                        <button id="rightDir" title="<Caps>" class="dirButton active" onclick="reverseDecoder(true)">Flags to Text</button>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table style="width:95%">
+            <tr>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="saveButton" title="<Space>" onclick="saveStack(false)">Save</button>
+                    <br>
+                    <button id="clearStack" title="<Ctrl+Backspace>" onclick="clearStack()">Clear</button>
+                </td>
+                <td id="saveCode">
+                </td>
+                <td style="width:1in; vertical-align: top;">
+                    <button id="clipCode" class="clipButton" onclick="clip('nautical')">Copy SVGs</button>
+                    <br>
+                    <button id="clipCode" class="clipButton" onclick="clip('nautical', 'data-text')">Copy NATO</button>
+                    <br>
+                    <button id="clipAlpha" class="clipButton" onclick="clip('alpha')">Copy Text</button>
+                    <br>
+                    <button id="pasteAlpha" class="clipButton" onclick="paste('alpha')">Paste Text</button>
+                </td>
+            </tr>
+        </table>
+        <div id="instructions" style="display: none;" onclick="toggleInstructions()">
+            <p>This decoder has two modes: converting from and to nautical flags.
+                <br>Use CAPS LOCK to toggle between these modes.
+            </p>
+            <p>When converting <i>from</i> Flags, the flag trait selectors are on the left.
+                <br>Pick a shape category to expand more shape variants.
+                <br>You may also pick one or more colors.
+                <br>Once the filter narrows to one or two candidates, they are shown.
+                <br><i>There are no keyboard shortcuts for the individual shapes or colors.</i>
+            </p>
+            <p>When converting <i>to</i> nautical flags, the flag image will be on the right.
+                <br>Type any letter to see its nautical flag equivalent.
+                <br>Punctuation are not converted.
+            </p>
+            <p>In either mode, type SPACE to save the current letter and start a new one.
+                <br>Typing BACKSPACE will erase saved letters.
+                <br>Typing ESCAPE will simple clear all bits.
+                <br><i>AUTO</i> (ctrl+SPACE) mode means all typing converts immediately.
+            </p>
+        </div>
+</body>
+</html>

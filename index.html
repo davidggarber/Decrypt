@@ -1,0 +1,225 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Handy Decoders</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=FiraSansExtraCondensed&family=Cousine&display=swap" rel="stylesheet">
+        <style>
+            body {
+                background-color: white;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            table tr:nth-child(odd) {
+                background-color: #f5f5f5;
+            }
+            table tr:nth-child(even) {
+                background-color: #ECEEEE;
+            }
+            td {
+                font-family:'Times New Roman', Times, serif;
+                font-size: 24pt;
+                height: 48pt;
+                vertical-align: middle;
+                padding-left: .5in;
+            }
+            td.left {
+                width: 2in;
+                cursor: pointer;
+            }
+            td.right {
+                width: 3in;
+            }
+            .semaphore path {
+                stroke:black;
+                stroke-width: 1.5px;
+                fill: none;
+            }
+            .boxes {
+                font-size: 10pt;
+                vertical-align: 6pt;
+            }
+            .box16 {
+                font-size: 110%;
+                letter-spacing: -1px;
+            }
+            .box8 {
+                letter-spacing: -1px;                
+            }
+            .box4 {
+                font-size: 90%;
+                letter-spacing: -.5px;
+            }
+            .box2 {
+                font-size: 80%;
+                letter-spacing: -.5px;
+            }
+            .box1 {
+                font-size: 70%;
+                letter-spacing: -.5px;
+            }
+            .bitbox {
+                fill: white;
+                stroke: black;
+                stroke-width: 1px;
+            }
+            .bitbox.on {
+                fill: #666666;
+            }
+            .tritbox {
+                stroke: black;
+                stroke-width: .5px;
+                fill: white;
+            }
+            .tritbox.on {
+                fill: black;
+            }
+            .pigpen {
+                vertical-align: -1pt;
+            }
+            .pigpen .path {
+                stroke: black;
+                stroke-width: 4px;
+                stroke-linejoin: round;
+                fill: none;
+            }
+            .pigpen .dot {
+                fill: black;
+                stroke: none;
+            }
+            .flag {
+                padding: 1px;
+                background-color: #eeeeee; 
+            }
+            .condensed {
+                letter-spacing: -4px;
+                padding-right: 3px;
+            }
+            .alpha-index {
+                font-family: "Fira Sans Extra Condensed rev=2";
+            }
+        </style>
+        <script>
+            var decode = true;
+            function onLoad() {
+                var search = window.location.search.toLowerCase();
+                if (search !== null) {
+                    var params = search.substring(1).split('&');
+                    for (var i = 0; i < params.length; i++) {
+                        var vals = params[i].split('=');
+                        if (vals.length == 1) {
+                            // parameter is a name without a value
+                            if (vals[0] == '') {
+                                continue;  // Ignore a lone stray =
+                            }
+                            vals.push('');  // set '' as the default value
+                        }
+                        
+                        if (vals[0] == 'encode' || vals[0] == 'alpha' || vals[0] == 'text' || vals[0] == 'paste') {
+                            decode = false;
+                        }
+                        else if (vals[0] == 'help' || vals[0].startsWith('instr')) {
+                            toggleInstructions(vals[1] != '0');
+                        }
+                        else if (vals[0] == 'decode') {
+                            decode = true;
+                        //     pasteCode(vals[1]);
+                        }
+                        else if (vals[0] == 'fast') {
+                            fastSave = vals[1] == '1' || vals[1].toLowerCase() == 'true';
+                        }
+                        else if (processUrlParam != undefined) {
+                                processUrlParam(vals[0], vals[1]);
+                        }
+                    }
+                }
+            }
+
+            function goto(decoder) {
+                var url = decoder + ".html" + window.location.search;
+                window.location.href = url;
+            }
+        </script>
+    </head>
+    <body onload="onLoad()">
+        <table>
+            <tr>
+                <td class="left" onclick="javascript:goto('Braille')">⠃⠗⠁⠊⠇⠇⠑</td>
+                <td class="right"><a href="javascript:goto('Braille')">Braille</a></td>
+            </tr>
+            <tr>
+                <td class="left" onclick="javascript:goto('Morse')">--&nbsp;---&nbsp;⋅-⋅&nbsp;⋅⋅⋅&nbsp;⋅</td>
+                <td class="right"><a href="javascript:goto('Morse')">Morse</a></td>
+            </tr>
+            <tr>
+                <td id="semaphore" class="left" onclick="javascript:goto('Semaphore')">
+                    <svg width="20" height="20" class="semaphore"><path d="M 0 9 L 8 9    M 15.5 15.5 L 10 10"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                    <svg width="20" height="20" class="semaphore"><path d="M 9 18 L 9 10  M 15.5 2.5 L 10 8"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                    <svg width="20" height="20" class="semaphore"><path d="M 2.5 15.5 L 8 10  M 18 9 L 10 9"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                    <svg width="20" height="20" class="semaphore"><path d="M 9 18 L 9 10  M 2.5 15.5 L 8 10"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                    <svg width="20" height="20" class="semaphore"><path d="M 0 9 L 8 9    M 9 0 L 9 8"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                    <svg width="20" height="20" class="semaphore"><path d="M 2.5 15.5 L 8 10  M 0 9 L 8 9"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                    <svg width="20" height="20" class="semaphore"><path d="M 0 9 L 8 9    M 2.5 2.5 L 8 8"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                    <svg width="20" height="20" class="semaphore"><path d="M 0 9 L 8 9    M 18 9 L 10 9"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                    <svg width="20" height="20" class="semaphore"><path d="M 9 18 L 9 10  M 15.5 2.5 L 10 8"></path><circle cx="9" cy="9" r="2" fill="white" stroke="black" stroke-width="0.25px"></circle></svg>
+                </td>
+                <td class="right"><a href="javascript:goto('Semaphore')">Semaphore</a></td>
+            </tr>
+            <tr>
+                <td class="left" onclick="javascript:goto('PigPen')">                
+                    <span class="pair"><svg class="pigpen" width="24" height="24"><path d="M 3 3 L 21 3 L 21 21" class="path"></path><circle cx="12" cy="12" r="3" class="dot"></circle></svg></span>
+                    <span class="pair"><svg class="pigpen" width="24" height="24"><path d="M 3 21 L 3 3 L 21 3" class="path"></path></svg></span>
+                    <span class="pair"><svg class="pigpen" width="24" height="24"><path d="M 3 3 L 21 3 L 21 21" class="path"></path></svg></span>
+                    <span class="pair"><svg class="pigpen" width="24" height="24"><path d="M 3 3 L 21 3 L 21 21" class="path"></path><circle cx="12" cy="12" r="3" class="dot"></circle></svg></span>
+                    <span class="pair"><svg class="pigpen" width="24" height="24"><path d="M 3 3 L 21 3 L 21 21 L 3 21 Z" class="path"></path></svg></span>
+                    <span class="pair"><svg class="pigpen" width="24" height="24"><path d="M 3 3 L 21 3 L 21 21 L 3 21 Z" class="path"></path><circle cx="12" cy="12" r="3" class="dot"></circle></svg></span> 
+                </td>
+                <td class="right"><a href="javascript:goto('PigPen')">Pig Pen</a></td>
+            </tr>
+            <tr>
+                <td class="left" onclick="javascript:goto('FiveBit')">
+                    <span class="pair"><svg class="bits" width="27" height="24"><rect x="1" width="5" y="1" height="22" rx="2" ry="2" class="bitbox off"></rect><rect x="6" width="5" y="4" height="19" rx="2" ry="2" class="bitbox off"></rect><rect x="11" width="5" y="7" height="16" rx="2" ry="2" class="bitbox on"></rect><rect x="16" width="5" y="10" height="13" rx="2" ry="2" class="bitbox on"></rect><rect x="21" width="5" y="13" height="10" rx="2" ry="2" class="bitbox off"></rect></svg></span> <span class="pair"><svg class="bits" width="27" height="24"><rect x="1" width="5" y="1" height="22" rx="2" ry="2" class="bitbox off"></rect><rect x="6" width="5" y="4" height="19" rx="2" ry="2" class="bitbox on"></rect><rect x="11" width="5" y="7" height="16" rx="2" ry="2" class="bitbox off"></rect><rect x="16" width="5" y="10" height="13" rx="2" ry="2" class="bitbox off"></rect><rect x="21" width="5" y="13" height="10" rx="2" ry="2" class="bitbox on"></rect></svg></span> <span class="pair"><svg class="bits" width="27" height="24"><rect x="1" width="5" y="1" height="22" rx="2" ry="2" class="bitbox on"></rect><rect x="6" width="5" y="4" height="19" rx="2" ry="2" class="bitbox off"></rect><rect x="11" width="5" y="7" height="16" rx="2" ry="2" class="bitbox on"></rect><rect x="16" width="5" y="10" height="13" rx="2" ry="2" class="bitbox on"></rect><rect x="21" width="5" y="13" height="10" rx="2" ry="2" class="bitbox off"></rect></svg></span> <span class="pair"><svg class="bits" width="27" height="24"><rect x="1" width="5" y="1" height="22" rx="2" ry="2" class="bitbox off"></rect><rect x="6" width="5" y="4" height="19" rx="2" ry="2" class="bitbox off"></rect><rect x="11" width="5" y="7" height="16" rx="2" ry="2" class="bitbox on"></rect><rect x="16" width="5" y="10" height="13" rx="2" ry="2" class="bitbox off"></rect><rect x="21" width="5" y="13" height="10" rx="2" ry="2" class="bitbox on"></rect></svg></span> <span class="pair"><svg class="bits" width="27" height="24"><rect x="1" width="5" y="1" height="22" rx="2" ry="2" class="bitbox off"></rect><rect x="6" width="5" y="4" height="19" rx="2" ry="2" class="bitbox off"></rect><rect x="11" width="5" y="7" height="16" rx="2" ry="2" class="bitbox off"></rect><rect x="16" width="5" y="10" height="13" rx="2" ry="2" class="bitbox on"></rect><rect x="21" width="5" y="13" height="10" rx="2" ry="2" class="bitbox off"></rect></svg></span> <span class="pair"><svg class="bits" width="27" height="24"><rect x="1" width="5" y="1" height="22" rx="2" ry="2" class="bitbox off"></rect><rect x="6" width="5" y="4" height="19" rx="2" ry="2" class="bitbox on"></rect><rect x="11" width="5" y="7" height="16" rx="2" ry="2" class="bitbox off"></rect><rect x="16" width="5" y="10" height="13" rx="2" ry="2" class="bitbox off"></rect><rect x="21" width="5" y="13" height="10" rx="2" ry="2" class="bitbox on"></rect></svg></span> <span class="pair"><svg class="bits" width="27" height="24"><rect x="1" width="5" y="1" height="22" rx="2" ry="2" class="bitbox on"></rect><rect x="6" width="5" y="4" height="19" rx="2" ry="2" class="bitbox off"></rect><rect x="11" width="5" y="7" height="16" rx="2" ry="2" class="bitbox on"></rect><rect x="16" width="5" y="10" height="13" rx="2" ry="2" class="bitbox off"></rect><rect x="21" width="5" y="13" height="10" rx="2" ry="2" class="bitbox off"></rect></svg></span> </div>
+                </td>
+                <td class="right"><a href="javascript:goto('FiveBit')">Five Bit</a></td>
+            </tr>
+            <tr>
+                <td class="left" onclick="javascript:goto('Trinary')">
+                    <span class="pair"><svg class="tribits" width="24" height="24"><rect x="1" width="6" y="1" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="1" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="1" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="1" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect></svg></span> <span class="pair"><svg class="tribits" width="24" height="24"><rect x="1" width="6" y="1" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="1" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="1" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect></svg></span> <span class="pair"><svg class="tribits" width="24" height="24"><rect x="1" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="1" width="6" y="9" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="1" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect></svg></span> <span class="pair"><svg class="tribits" width="24" height="24"><rect x="1" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="1" width="6" y="9" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="1" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="9" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="9" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="1" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect></svg></span> <span class="pair"><svg class="tribits" width="24" height="24"><rect x="1" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="1" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="1" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="9" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="9" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect></svg></span> <span class="pair"><svg class="tribits" width="24" height="24"><rect x="1" width="6" y="1" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="1" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="1" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="17" height="6" class="tritbox on" rx="1" ry="1"></rect></svg></span> <span class="pair"><svg class="tribits" width="24" height="24"><rect x="1" width="6" y="1" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="1" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="1" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="1" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="9" width="6" y="9" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="9" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="1" height="6" class="tritbox off" rx="2" ry="2"></rect><rect x="17" width="6" y="9" height="6" class="tritbox on" rx="1" ry="1"></rect><rect x="17" width="6" y="17" height="6" class="tritbox off" rx="2" ry="2"></rect></svg></span>
+                </td>
+                <td class="right"><a href="javascript:goto('Trinary')">Trinary</a></td>
+            </tr>
+            <tr>
+                <td class="left" onclick="javascript:goto('Nautical')">
+                    <svg class="flag" width="32" height="24"><g><rect x="0" y="0" height="24" width="32" fill="white" stroke="none"></rect><polygon fill="red" stroke="none" points="16,0 32,12 16,24 0,12 "></polygon></g></svg> <svg class="flag" width="32" height="24"><g><rect x="0" y="0" height="12" width="16" fill="yellow" stroke="none"></rect><rect x="16" y="0" height="12" width="16" fill="black" stroke="none"></rect><rect x="0" y="12" height="12" width="16" fill="black" stroke="none"></rect><rect x="16" y="12" height="12" width="16" fill="yellow" stroke="none"></rect></g></svg> <svg class="flag" width="32" height="24"><g><rect x="0" y="0" height="24" width="16" fill="white" stroke="none"></rect><polygon points="16,0 32,0 19.200000000000003,12 32,24 16,24 " fill="blue" stroke="none"></polygon></g></svg> <svg class="flag" width="32" height="24"><g><rect x="0" y="0" height="24" width="5.333333333333333" fill="yellow" stroke="none"></rect><rect x="5.333333333333333" y="0" height="24" width="5.333333333333333" fill="blue" stroke="none"></rect><rect x="10.666666666666666" y="0" height="24" width="5.333333333333333" fill="yellow" stroke="none"></rect><rect x="16" y="0" height="24" width="5.333333333333333" fill="blue" stroke="none"></rect><rect x="21.333333333333332" y="0" height="24" width="5.333333333333333" fill="yellow" stroke="none"></rect><rect x="26.666666666666664" y="0" height="24" width="5.333333333333333" fill="blue" stroke="none"></rect></g></svg> <svg class="flag" width="32" height="24"><g><rect x="0" y="0" height="24" width="32" fill="white" stroke="none"></rect><rect x="8" y="6" height="12" width="16" fill="blue" stroke="none"></rect></g></svg>                    
+                </td>
+                <td class="right"><a href="javascript:goto('Nautical')">Nautical Flags</a></td>
+            </tr>
+            <tr>
+                <td class="left" onclick="javascript:goto('RotCipher')">
+                    <span style="font-family: Cousine; font-variant: small-caps;">Ebgngvba Pvcure</span>
+                </td>
+                <td class="right"><a href="javascript:goto('RotCipher')">Rotation Cipher</a></td>
+            </tr>
+            <tr>
+                <td class="left" class="alpha-index">
+                    <span class="condensed">1</span>
+                    <span class="condensed">18</span>
+                    <span class="condensed">3</span>
+                    <span class="condensed">9</span>
+                    <span class="condensed">9</span>
+                    <br>
+                    <span class="condensed">9</span>
+                    <span class="condensed">14</span>
+                    <span class="condensed">4</span>
+                    <span class="condensed">5</span>
+                    <span class="condensed">24</span>
+                </td>
+                <td class="right"><a href="javascript:goto('Ascii')">Ascii Index</a></td>
+            </tr>
+        </table>
+        
+    </body>
+</html>
