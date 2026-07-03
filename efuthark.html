@@ -1,0 +1,418 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Futhark cheat sheet</title>
+    <style>
+        :root {
+            --text: black;
+            --inverse: white;
+            --gray: #333;
+            --background: #f2f2f2;
+            --border: #ddd;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text: white;
+                --inverse: black;
+                --gray: #ccc;
+                --background: #222;
+                --border: #666;
+            }
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: var(--text);
+            background-color: var(--background);
+        }
+
+        h1 {
+            color: var(--gray);
+        }
+
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+            table-layout: fixed;
+        }
+
+        th,
+        td {
+            min-width: 0.5in;
+            padding: 4px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--background);
+        }
+
+        .futhark {
+            width: 1in;
+            border: 1px solid var(--border);
+            font-family: "Segoe UI Symbol", "Noto Sans Symbols", "Arial Unicode MS", sans-serif;
+            font-size: 44px;
+            font-weight: 900;
+            color: var(--inverse);
+            text-shadow: 0px 0px 3px var(--text),
+                0px 0px 3px var(--text),
+                0px 0px 3px var(--text),
+                0px 0px 3px var(--text),
+                0px 0px 2px var(--text);
+        }
+
+        .futhark.big {
+            padding: 0px;
+            font-size: 52px;
+        }
+
+        .latin {
+            width: 1in;
+            border: 1px solid var(--border);
+            font-family: Arial, sans-serif;
+            font-size: 36px;
+            color: var(--text);
+        }
+
+        .futhark svg {
+            width: 50px;
+            height: 50px;
+            fill: none;
+        }
+
+        path {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Elder Futhark cheat sheet</h1>
+    <p>This table is a simplified summary of the <a href="https://en.wikipedia.org/wiki/Elder_Futhark">Wikipedia
+            article</a>.</p>
+    <table>
+        <tr>
+            <th>Futhark</th>
+            <th>Latin</th>
+            <td>&nbsp;</td>
+            <th>Futhark</th>
+            <th>Latin</th>
+            <td>&nbsp;</td>
+            <th>Futhark</th>
+            <th>Latin</th>
+        </tr>
+        <tr>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚠ</title>
+                    <defs>
+                        <path id="F-path" d="M0,0 v680 M0,400 A500,400 0 0,0 500,0 M0,200 A300,200 0 0,0 300,0" />
+                    </defs>
+                    <use href="#F-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#F-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">F</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚺ</title>
+                    <defs>
+                        <path id="H-path" d="M0,0 v680 M500,0 v680 M0,260 l500,160" />
+                    </defs>
+                    <use href="#H-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#H-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">H</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛏ</title>
+                    <defs>
+                        <path id="T-path" d="M250,0 v680 M0,250 l250,-250 l250,250" />
+                    </defs>
+                    <use href="#T-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#T-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">T</td>
+        </tr>
+
+        <tr>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚢ</title>
+                    <defs>
+                        <path id="U-path" d="M0,680 v-680 a500,400 0 0,1 500,400 v280" />
+                    </defs>
+                    <use href="#U-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#U-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">U</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚾ</title>
+                    <defs>
+                        <path id="N-path" d="M250,0 v680 M0,260 l500,160" />
+                    </defs>
+                    <use href="#N-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#N-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">N</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛒ</title>
+                    <defs>
+                        <path id="B-path" d="M0,0 v680 l500,-170 l-500,-170 l500,-170 Z" />
+                    </defs>
+                    <use href="#B-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#B-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">B</td>
+        </tr>
+
+        <tr>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚦ</title>
+                    <defs>
+                        <path id="TH-path" d="M80,680 v-680 m0,120 a340,220 0 0,1 0,440" />
+                    </defs>
+                    <use href="#TH-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#TH-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">TH</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛁ</title>
+                    <defs>
+                        <path id="I-path" d="M250,0 v680" />
+                    </defs>
+                    <use href="#I-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#I-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">I</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛖ</title>
+                    <defs>
+                        <path id="E-path" d="M0,680 v-680 l250,340 l250,-340 v680" />
+                    </defs>
+                    <use href="#E-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#E-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">E</td>
+        </tr>
+
+        <tr>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚨ</title>
+                    <defs>
+                        <path id="A-path" d="M0,680 v-680 l500,200 M0,250 l500,200" />
+                    </defs>
+                    <use href="#A-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#A-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">A</td>
+            <td>&nbsp;</td>
+            <td class="futhark big">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛃ</title>
+                    <defs>
+                        <path id="J-path" d="M220,0 l-220,220 l220,220 M280,680 l220,-220 l-220,-220" />
+                    </defs>
+                    <use href="#J-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#J-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">J</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛗ</title>
+                    <defs>
+                        <path id="M-path" d="M0,680 v-680 l500,400 M500,680 v-680 l-500,400" />
+                    </defs>
+                    <use href="#M-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#M-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">M</td>
+        </tr>
+
+        <tr>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚱ</title>
+                    <defs>
+                        <path id="R-path" d="M0,680 v-680 l500,170 l-500,170 l500,340" />
+                    </defs>
+                    <use href="#R-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#R-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">R</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛈ</title>
+                    <defs>
+                        <path id="P-path" d="M500,680 l-250,-120 l-250,120 v-680 l250,120 l250,-120" />
+                    </defs>
+                    <use href="#P-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#P-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">P</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛚ</title>
+                    <defs>
+                        <path id="L-path" d="M0,680 v-680 l500,300" />
+                    </defs>
+                    <use href="#L-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#L-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">L</td>
+        </tr>
+
+        <tr>
+            <td class="futhark big">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚲ</title>
+                    <defs>
+                        <path id="K-path" d="M400,50 l-300,290 l300,290" />
+                    </defs>
+                    <use href="#K-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#K-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">K</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛇ</title>
+                    <defs>
+                        <path id="II-path" d="M500,140 l-250,-140 v650 l-250,-140" />
+                    </defs>
+                    <use href="#II-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#II-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">Ï</td>
+            <td>&nbsp;</td>
+            <td class="futhark big">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛜ</title>
+                    <defs>
+                        <path id="NG-path" d="M250,50 l250,290 l-250,290 l-250,-290 Z" />
+                    </defs>
+                    <use href="#NG-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#NG-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">NG</td>
+        </tr>
+
+        <tr>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚷ</title>
+                    <defs>
+                        <path id="G-path" d="M0,0 l500,680 M500,0 l-500,680" />
+                    </defs>
+                    <use href="#G-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#G-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">G</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛉ</title>
+                    <defs>
+                        <path id="Z-path" d="M250,00 v680 M0,0 l250,340 l250-340" />
+                    </defs>
+                    <use href="#Z-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#Z-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">Z</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛞ</title>
+                    <defs>
+                        <path id="D-path" d="M0,0 v680 l500,-680 V680 Z" />
+                    </defs>
+                    <use href="#D-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#D-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">D</td>
+        </tr>
+
+        <tr>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᚹ</title>
+                    <defs>
+                        <path id="W-path" d="M0,680 v-680 l500,170 l-500,170" />
+                    </defs>
+                    <use href="#W-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#W-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">W</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛊ</title>
+                    <defs>
+                        <path id="S-path" d="M500,0 L0,170 L500,340 L0,510 L500,680" />
+                    </defs>
+                    <use href="#S-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#S-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">S</td>
+            <td>&nbsp;</td>
+            <td class="futhark">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="-200 -200 1000 1000">
+                    <title>ᛟ</title>
+                    <defs>
+                        <path id="O-path" d="M0,680 l500,-440 l-250,-240 l-250,240 l500,440" />
+                    </defs>
+                    <use href="#O-path" stroke="var(--text)" stroke-width="150" />
+                    <use href="#O-path" stroke="var(--inverse)" stroke-width="90" />
+                </svg>
+            </td>
+            <td class="latin">O</td>
+        </tr>
+
+    </table>
+
+</body>
+
+</html>
